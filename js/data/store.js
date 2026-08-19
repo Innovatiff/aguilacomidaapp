@@ -28,6 +28,7 @@ const state = {
 
 const subscribers = new Set();
 let stops = [];
+let dayWatch = null;
 
 export const store = state;
 
@@ -55,11 +56,7 @@ export function startStore(clientId) {
       emit();
     }, onError),
 
-    watchDay(clientId, state.day, (row) => {
-      state.todayDelivery = row;
-      state.loaded.today = true;
-      emit();
-    }, onError),
+    watchToday(),
 
     watchHistory(clientId, 40, (rows) => {
       state.history = rows;
@@ -78,11 +75,46 @@ export function startStore(clientId) {
       emit();
     }, () => {}),
   ];
+
+  document.addEventListener('visibilitychange', checkDayRollover);
+}
+
+/**
+ * Watches the delivery for whatever day it is *now*.
+ *
+ * Farms leave the app open. Without this the home screen would still be
+ * tracking yesterday's delivery the next morning, which is exactly the
+ * moment the screen matters most.
+ */
+function watchToday() {
+  dayWatch?.();
+  const day = state.day;
+  dayWatch = watchDay(state.clientId, day, (row) => {
+    if (state.day !== day) return;      // a stale response for a day we left
+    state.todayDelivery = row;
+    state.loaded.today = true;
+    emit();
+  }, onError);
+  return () => dayWatch?.();
+}
+
+/** Rolls the tracked day over when the app comes back to the foreground. */
+function checkDayRollover() {
+  if (document.visibilityState !== 'visible') return;
+  const now = today();
+  if (now === state.day) return;
+  state.day = now;
+  state.todayDelivery = null;
+  state.loaded.today = false;
+  emit();
+  watchToday();
 }
 
 export function stopStore() {
+  document.removeEventListener('visibilitychange', checkDayRollover);
   for (const stop of stops) { try { stop(); } catch { /* already detached */ } }
   stops = [];
+  dayWatch = null;
   Object.assign(state, {
     clientId: null, client: null, todayDelivery: null, history: [],
     invoices: [], conversation: null, error: null,
