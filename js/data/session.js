@@ -1,41 +1,46 @@
 /**
- * Auth session + the signed-in user's profile document.
+ * Auth session for the farm app.
  *
- * `users/{uid}` carries the role (`admin` | `client`) and, for a farm, the
- * `clientId` that links the login to its `clients/{id}` record. The profile is
- * watched rather than fetched once, so linking a login to a farm — or revoking
- * it — takes effect on the user's phone immediately, without a sign-out.
+ * Which farm this account belongs to is decided by one document:
+ * `clientEmails/{your email}`, written by the kitchen when it registers the
+ * farm. There is no code to redeem and nothing for the farm to claim — the
+ * kitchen typing the address *is* the grant.
+ *
+ * That document is watched rather than read once, so a farm registered (or
+ * moved to a different address) while the app is open reacts immediately.
+ *
+ * `users/{uid}` holds only a display name and a phone number. It carries no
+ * authority whatsoever.
  */
 
 import {
-  auth, db, doc, setDoc, updateDoc, onSnapshot, getDoc, serverTimestamp,
+  auth, db, doc, setDoc, onSnapshot, serverTimestamp,
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signOut, updateProfile, sendPasswordResetEmail, docData,
 } from '../firebase.js';
 
-const state = { user: null, profile: null, ready: false, error: null };
+const state = { user: null, link: null, profile: null, ready: false };
 const listeners = new Set();
+let stopLink = null;
 let stopProfile = null;
 
 export const session = {
   get user() { return state.user; },
-  get profile() { return state.profile; },
-  get ready() { return state.ready; },
   get uid() { return state.user?.uid || null; },
-  get role() { return state.profile?.role || null; },
-  get clientId() { return state.profile?.clientId || null; },
+  /** Lowercased, because that is how the lookup is keyed. */
+  get email() { return (state.user?.email || '').trim().toLowerCase(); },
+  get ready() { return state.ready; },
+  get clientId() { return state.link?.clientId || null; },
+  get clientName() { return state.link?.clientName || ''; },
+  get profile() { return state.profile; },
+  /** Signed in, but the kitchen has not registered this address for a farm. */
+  get isUnregistered() { return !!state.user && !state.link; },
   get displayName() {
     return state.profile?.name || state.user?.displayName || state.user?.email || '';
   },
-  get isAdmin() { return state.profile?.role === 'admin'; },
-  get isClient() { return state.profile?.role === 'client'; },
-  /** A client login that has not been linked to a farm yet. */
-  get isUnlinked() { return state.profile?.role === 'client' && !state.profile?.clientId; },
 };
 
-function emit() {
-  for (const fn of listeners) fn(session);
-}
+const emit = () => { for (const fn of listeners) fn(session); };
 
 /** Subscribe to session changes. Returns an unsubscribe function. */
 export function watchSession(fn) {
@@ -44,64 +49,76 @@ export function watchSession(fn) {
   return () => listeners.delete(fn);
 }
 
-/** Starts the auth listener. Call once at boot. */
 export function startSession() {
   onAuthStateChanged(auth, (user) => {
+    stopLink?.();
     stopProfile?.();
+    stopLink = null;
     stopProfile = null;
+
     state.user = user;
+    state.link = null;
+    state.profile = null;
 
     if (!user) {
-      state.profile = null;
       state.ready = true;
       emit();
       return;
     }
 
+    const email = (user.email || '').trim().toLowerCase();
+    if (!email) {
+      state.ready = true;
+      emit();
+      return;
+    }
+
+    stopLink = onSnapshot(
+      doc(db, 'clientEmails', email),
+      (snap) => {
+        state.link = docData(snap);
+        state.ready = true;
+        emit();
+      },
+      () => {
+        // A refused read means "not registered" just as clearly as an empty one.
+        state.link = null;
+        state.ready = true;
+        emit();
+      },
+    );
+
     stopProfile = onSnapshot(
       doc(db, 'users', user.uid),
-      (snap) => {
-        state.profile = docData(snap);
-        state.ready = true;
-        state.error = null;
-        emit();
-      },
-      (error) => {
-        state.profile = null;
-        state.ready = true;
-        state.error = error;
-        emit();
-      },
+      (snap) => { state.profile = docData(snap); emit(); },
+      () => {},
     );
   });
 }
 
-/* --- Actions --------------------------------------------------------------- */
+/* --- Actions ---------------------------------------------------------------- */
 
 export async function signIn(email, password) {
   const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
-  await touchLastSeen(credential.user.uid);
   return credential.user;
 }
 
 /**
- * Creates a login and its profile document in one step. The profile is written
- * by the client itself, so the security rules pin `role` to what the caller is
- * allowed to claim (see firestore.rules).
+ * Creates the login for an address the kitchen has already registered.
+ *
+ * The account itself grants nothing: what opens the app is
+ * `clientEmails/{email}`, and only the kitchen can write that.
  */
-export async function signUp({ email, password, name, role = 'client', phone = '' }) {
+export async function signUp({ email, password, name, phone = '' }) {
   const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
   const user = credential.user;
   if (name) await updateProfile(user, { displayName: name });
 
   await setDoc(doc(db, 'users', user.uid), {
     name: name || '',
-    email: user.email,
-    phone: phone || '',
-    role,
-    clientId: null,
+    email: user.email || '',
+    phone,
     createdAt: serverTimestamp(),
-    lastSeenAt: serverTimestamp(),
   });
   return user;
 }
@@ -110,21 +127,13 @@ export const signOutNow = () => signOut(auth);
 
 export const resetPassword = (email) => sendPasswordResetEmail(auth, email.trim());
 
+/** Saves this person's own name and phone. Grants nothing. */
 export async function updateOwnProfile(patch) {
   if (!state.user) throw new Error('Sin sesión');
-  await updateDoc(doc(db, 'users', state.user.uid), { ...patch, updatedAt: serverTimestamp() });
+  await setDoc(doc(db, 'users', state.user.uid), {
+    ...patch,
+    email: state.user.email || '',
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
   if (patch.name) await updateProfile(state.user, { displayName: patch.name });
-}
-
-async function touchLastSeen(uid) {
-  try {
-    await updateDoc(doc(db, 'users', uid), { lastSeenAt: serverTimestamp() });
-  } catch {
-    // A brand-new account may not have its profile document yet; harmless.
-  }
-}
-
-/** One-shot read of any user profile (admins reading a client's contact). */
-export async function fetchProfile(uid) {
-  return docData(await getDoc(doc(db, 'users', uid)));
 }

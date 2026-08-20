@@ -1,10 +1,13 @@
 /**
  * Farm sign-in.
  *
- * Anyone can create an account here, and an account on its own sees nothing:
- * it becomes useful only after redeeming the access code the kitchen handed
- * over (see link.js). That keeps sign-up self-serve without the kitchen ever
- * handling somebody else's password.
+ * Anyone can create an account here, and an account on its own sees nothing.
+ * What opens the app is `clientEmails/{email}`, written by the kitchen when it
+ * registers the farm — so signing up with an address the kitchen has not
+ * registered gets you a login and no data at all.
+ *
+ * The point of letting farms sign themselves up is that the kitchen never
+ * handles anybody else's password.
  */
 
 import { h, mount } from '../lib/dom.js';
@@ -49,7 +52,6 @@ export function renderAuth(host) {
           password: values.password,
           name: values.name,
           phone: values.phone,
-          role: 'client',
         });
         handedOff = true;
         return;
@@ -75,7 +77,7 @@ export function renderAuth(host) {
       },
       signup: {
         lede: 'Crea tu cuenta',
-        sub: 'Después ingresas el código que te dio la cocina para conectar tu rancho.',
+        sub: 'Usa el mismo correo que le diste a la cocina; con eso encuentra tu rancho.',
         cta: 'Crear cuenta',
       },
       reset: {
@@ -111,6 +113,9 @@ export function renderAuth(host) {
               name: 'email', type: 'email', required: true, autocomplete: 'email',
               inputmode: 'email', placeholder: 'tu@correo.com',
             }),
+            hint: mode === 'signup'
+              ? 'Tiene que ser el correo que la cocina registró para tu rancho.'
+              : null,
           }),
 
           mode === 'signup' ? field({

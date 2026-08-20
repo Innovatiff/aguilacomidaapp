@@ -27,18 +27,19 @@ Esta app existe para que no tengan que llamar por teléfono para saber.
 
 ## Cómo entra un rancho
 
-1. La cocina registra el rancho en su panel; el software genera un **código de
-   acceso** de 6 caracteres.
-2. El encargado abre esta app, crea su cuenta con su correo y contraseña.
-3. Escribe el código. La app lo resuelve, muestra el nombre del rancho para
-   confirmar, y al aceptar queda conectado.
+1. La cocina registra el rancho en su panel **con el correo del encargado**.
+2. El encargado abre esta app y crea su cuenta con ese mismo correo.
+3. Listo. La app se abre con los datos de su rancho.
 
-Una cuenta sin conectar no ve absolutamente nada. Varias personas del mismo
-rancho pueden conectarse con el mismo código, y el código caduca a los 30 días.
+No hay códigos, ni pasos de vinculación, ni nada que compartir por teléfono. El
+correo que escribió la cocina *es* el acceso.
 
-Si hace falta cortar el acceso, la cocina usa **Generar código nuevo** o
-**Quitar acceso** en la ficha del rancho. Generar uno nuevo invalida el anterior
-al instante, incluso para alguien que ya lo tenía escrito.
+Si alguien entra con un correo que la cocina no registró, ve una pantalla que se
+lo explica y le muestra su propio correo para que se lo dicte a la cocina — y en
+cuanto lo registren, esa pantalla se convierte en su app sola.
+
+Para mover o quitar el acceso, la cocina cambia el correo en la ficha del
+rancho. El anterior deja de funcionar al instante.
 
 ---
 
@@ -91,18 +92,18 @@ manifest.webmanifest  instalable en el teléfono
 
 css/                  mismos tokens y componentes que el panel de la cocina
 js/
-  app.js              arranque: sin sesión → entrar; sin rancho → conectar; listo → app
+  app.js              arranque: sin sesión → entrar; correo sin registrar → aviso; listo → app
   firebase.js         SDK de Firebase (CDN) y configuración del proyecto
   lib/                dom, router, fechas, cobro quincenal, formato, modelo, iconos
   data/
-    session.js        sesión y perfil del usuario
-    clients.js        el rancho propio + canje del código de acceso
+    session.js        sesión y el rancho al que pertenece este correo
+    clients.js        el rancho propio (sólo lectura)
     deliveries.js     entregas (sólo lectura) y la línea de tiempo de seguimiento
     invoices.js       facturas y pagos (sólo lectura)
     chat.js           hilo con la cocina
     store.js          escuchas en vivo del rancho
   ui/                 shell, kit de componentes, hojas, chat, saldo
-  screens/            login, link, home, deliveries, billing, chat, profile
+  screens/            login, unregistered, home, deliveries, billing, chat, profile
 ```
 
 `css/`, `js/lib/`, `js/ui/` y `js/firebase.js` son idénticos a los del panel de
@@ -138,10 +139,9 @@ consulta que no filtre por el rancho propio simplemente falla. Un rancho no
 puede ver a otro, ni sus pagos, ni sus mensajes. Tampoco puede escribir dinero:
 las facturas y las entregas las escribe la cocina.
 
-Vincularse es una cadena de dos eslabones que las reglas verifican, no la app:
-canjear el código vigente permite entrar en `linkedUids` del rancho, y sólo
-estar en `linkedUids` permite apuntar el perfil a ese rancho. Por eso conocer el
-identificador de un rancho no sirve de nada por sí solo.
+Qué rancho ve cada quien lo decide `clientEmails/{correo}`, un documento que
+sólo la cocina puede escribir. Esta app únicamente lo lee: no hay nada que
+reclamar ni que canjear, así que tampoco hay nada que falsificar desde aquí.
 
 Las reglas viven en `aguilacomidasoftware/firestore.rules` y están probadas
 contra el emulador de Firestore (`tests/rules` en ese repositorio).
