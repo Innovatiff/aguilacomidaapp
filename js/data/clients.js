@@ -7,7 +7,7 @@
  */
 
 import {
-  db, doc, getDoc, updateDoc, onSnapshot, serverTimestamp, arrayUnion, docData,
+  db, doc, getDoc, setDoc, updateDoc, onSnapshot, serverTimestamp, arrayUnion, docData,
 } from '../firebase.js';
 
 export function watchClient(clientId, onData, onError) {
@@ -30,8 +30,20 @@ export async function resolveAccessCode(code) {
   return snap.exists() ? { code: key, ...snap.data() } : null;
 }
 
-/** Links the signed-in login to a farm. Both writes are allowed by the rules. */
-export async function linkSelfToClient(uid, clientId) {
+/**
+ * Links the signed-in login to a farm.
+ *
+ * Three writes, in this order, because the security rules chain them:
+ * staging the code is what authorises joining `linkedUids`, and being in
+ * `linkedUids` is what authorises pointing the profile at the farm. Skipping
+ * or reordering any step is rejected server-side, which is the point — the
+ * checks do not live in this file.
+ */
+export async function linkSelfToClient(uid, clientId, code) {
+  await setDoc(doc(db, 'redemptions', uid), {
+    code: normalizeCode(code),
+    at: serverTimestamp(),
+  });
   await updateDoc(doc(db, 'clients', clientId), { linkedUids: arrayUnion(uid) });
   await updateDoc(doc(db, 'users', uid), { clientId, linkedAt: serverTimestamp() });
 }

@@ -51,14 +51,18 @@ export function renderLink(host) {
     busy = true; error = ''; draw();
 
     try {
-      await linkSelfToClient(session.uid, found.clientId);
+      await linkSelfToClient(session.uid, found.clientId, found.code);
       await ensureConversation({ id: found.clientId, name: found.clientName, linkedUids: [session.uid] });
       handedOff = true;
       toastOk(`Conectado con ${found.clientName}`);
       // The session watcher sees the new clientId and swaps in the app.
     } catch (err) {
       busy = false;
-      error = dbMessage(err);
+      // The rules reject a code that has expired or been replaced. That is the
+      // one failure a farm manager can actually do something about, so name it.
+      error = err?.code === 'permission-denied'
+        ? 'Ese código ya venció o fue reemplazado. Pide uno nuevo a la cocina.'
+        : dbMessage(err);
       draw();
       toastBad(error);
     }

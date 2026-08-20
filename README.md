@@ -34,10 +34,11 @@ Esta app existe para que no tengan que llamar por teléfono para saber.
    confirmar, y al aceptar queda conectado.
 
 Una cuenta sin conectar no ve absolutamente nada. Varias personas del mismo
-rancho pueden conectarse con el mismo código.
+rancho pueden conectarse con el mismo código, y el código caduca a los 30 días.
 
 Si hace falta cortar el acceso, la cocina usa **Generar código nuevo** o
-**Quitar acceso** en la ficha del rancho.
+**Quitar acceso** en la ficha del rancho. Generar uno nuevo invalida el anterior
+al instante, incluso para alguien que ya lo tenía escrito.
 
 ---
 
@@ -122,6 +123,15 @@ mala; la app abre y muestra lo último que sabe.
 ## Privacidad
 
 Las reglas de Firestore confinan cada cuenta a su propio rancho: Firestore
-evalúa las reglas contra cada documento que devolvería una consulta, así que
-una consulta que no filtre por el rancho propio simplemente falla. Un rancho no
-puede ver a otro, ni sus pagos, ni sus mensajes.
+evalúa las reglas contra cada documento que devolvería una consulta, así que una
+consulta que no filtre por el rancho propio simplemente falla. Un rancho no
+puede ver a otro, ni sus pagos, ni sus mensajes. Tampoco puede escribir dinero:
+las facturas y las entregas las escribe la cocina.
+
+Vincularse es una cadena de dos eslabones que las reglas verifican, no la app:
+canjear el código vigente permite entrar en `linkedUids` del rancho, y sólo
+estar en `linkedUids` permite apuntar el perfil a ese rancho. Por eso conocer el
+identificador de un rancho no sirve de nada por sí solo.
+
+Las reglas viven en `aguilacomidasoftware/firestore.rules` y están probadas
+contra el emulador de Firestore (`tests/rules` en ese repositorio).
