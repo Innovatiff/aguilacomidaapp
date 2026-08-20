@@ -1,9 +1,10 @@
 /**
- * The farm this login belongs to — read only.
+ * The person this login belongs to — read only.
  *
- * A farm app only ever touches one `clients/{id}` document. Which one is
- * decided by `clientEmails/{your email}`, written by the kitchen; this app
- * never claims or changes it.
+ * This app only ever touches one `clients/{id}` document: yours. Which one is
+ * decided by `clientEmails/{your email}`, written by the kitchen; the app never
+ * claims or changes it. The farm you work at and the location where your food
+ * is left travel on that same document, so there is nothing else to read.
  */
 
 import { db, doc, getDoc, onSnapshot, docData } from '../firebase.js';

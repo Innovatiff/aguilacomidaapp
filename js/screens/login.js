@@ -77,7 +77,7 @@ export function renderAuth(host) {
       },
       signup: {
         lede: 'Crea tu cuenta',
-        sub: 'Usa el mismo correo que le diste a la cocina; con eso encuentra tu rancho.',
+        sub: 'Usa el mismo correo que le diste a la cocina; con eso te encuentra.',
         cta: 'Crear cuenta',
       },
       reset: {
@@ -93,7 +93,7 @@ export function renderAuth(host) {
           h('span', { style: { color: 'var(--brand-500)' } }, icon('eagle')),
           h('div',
             h('div.auth__name', 'El Águila Cocina'),
-            h('div.auth__tag', 'Para nuestros ranchos'))),
+            h('div.auth__tag', 'Para nuestros clientes'))),
         h('h1.auth__lede', copy.lede),
         h('p.auth__sub', copy.sub)),
 
@@ -114,7 +114,7 @@ export function renderAuth(host) {
               inputmode: 'email', placeholder: 'tu@correo.com',
             }),
             hint: mode === 'signup'
-              ? 'Tiene que ser el correo que la cocina registró para tu rancho.'
+              ? 'Tiene que ser el correo que la cocina registró a tu nombre.'
               : null,
           }),
 

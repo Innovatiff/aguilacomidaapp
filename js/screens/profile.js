@@ -1,8 +1,8 @@
 /**
- * Perfil — the account, the farm's agreed terms, and the way out.
+ * Perfil — the account, where you eat, the agreed terms, and the way out.
  *
- * The terms are shown in full on purpose: a farm should be able to check the
- * price it is being charged without asking the person charging it.
+ * The terms are shown in full on purpose: you should be able to check the price
+ * you are being charged without asking the person charging it.
  */
 
 import { h } from '../lib/dom.js';
@@ -16,7 +16,7 @@ import { session, signOutNow, updateOwnProfile } from '../data/session.js';
 import { store, subscribe } from '../data/store.js';
 import { clientStatusMeta } from '../lib/model.js';
 import { formatDayLong, today, WEEKDAYS_SHORT, capitalize } from '../lib/dates.js';
-import { money, moneyFull, number, phone as fmtPhone, telHref } from '../lib/format.js';
+import { money, moneyFull, number, phone as fmtPhone } from '../lib/format.js';
 import { PERIOD_DAYS } from '../lib/billing.js';
 import { dbMessage } from '../firebase.js';
 
@@ -48,19 +48,19 @@ export function renderProfile() {
       button('Editar mis datos', { variant: 'ghost', size: 'sm', block: true, icon: 'edit', onClick: editProfile })));
   }
 
+  /** Where the food is left — the farm, and the spot inside it. */
   function farmCard() {
     const client = store.client;
     const status = clientStatusMeta(client.status);
 
     return h('div.stack.stack-3',
-      sectionLabel('Mi rancho'),
+      sectionLabel('Dónde recibo mi comida'),
       card(h('div.stack.stack-3',
         h('div.row.row--between',
           h('div',
-            h('div.t-lg.w-700', client.name),
-            client.contactName ? h('div.t-sm.c-soft', client.contactName) : null),
+            h('div.t-lg.w-700', client.farmName || 'Tu rancho'),
+            client.locationName ? h('div.t-sm.c-soft', client.locationName) : null),
           badge(status.label, status.tone, status.icon)),
-        client.address ? h('div.t-sm.c-soft', client.address) : null,
         client.status !== 'active'
           ? alert('Tu servicio está en pausa. Escríbenos para reanudarlo.', 'warn')
           : null)));
@@ -86,19 +86,25 @@ export function renderProfile() {
         defRow('Estimado por quincena',
           money((Number(client.mealsPerDay) || 0) * (Number(client.pricePerMeal) || 0) * 12, { round: true })),
       ])),
-      h('p.t-xs.c-faint',
-        'El estimado supone 12 días de servicio. Se cobra únicamente lo entregado.'));
+      h('p.t-xs.c-faint', client.farmName
+        ? `Estas condiciones las acordó la cocina con ${client.farmName}. El estimado supone `
+          + '12 días de servicio; se cobra únicamente lo entregado.'
+        : 'El estimado supone 12 días de servicio. Se cobra únicamente lo entregado.'));
   }
 
+  /**
+   * The chat is the only support channel on purpose: it leaves a record both
+   * sides can read back, which a phone call does not.
+   */
   function helpCard() {
-    const phone = store.client?.phone;
     return h('div.stack.stack-3',
       sectionLabel('¿Necesitas algo?'),
-      card(h('div.stack.stack-2',
-        button('Escribir a la cocina', { variant: 'primary', block: true, icon: 'chat', onClick: () => go('/chat') }),
-        phone
-          ? h('a.btn.btn--ghost.btn--block', { href: telHref(phone) }, 'Llamar al rancho')
-          : null)));
+      card(h('div.stack.stack-3',
+        h('p.t-sm.c-soft', 'Cambios en tus comidas, un problema con la entrega o los datos para '
+          + 'pagar: escríbele a la cocina y queda registrado.'),
+        button('Escribir a la cocina', {
+          variant: 'primary', block: true, icon: 'chat', onClick: () => go('/chat'),
+        }))));
   }
 
   const aboutCard = () => h('div.stack.stack-3',

@@ -1,10 +1,10 @@
 /**
- * The farm's live data.
+ * One person's live data.
  *
- * One farm, one set of listeners: its own record, today's stop, the recent
- * days, its invoices and its thread with the kitchen. Everything the screens
- * show is derived from these five, so the app never re-queries on navigation
- * and every screen agrees with every other one.
+ * One client, one set of listeners: their own record, today's stop, the recent
+ * days, their invoices and their thread with the kitchen. Everything the
+ * screens show is derived from these five, so the app never re-queries on
+ * navigation and every screen agrees with every other one.
  */
 
 import { watchClient } from './clients.js';
@@ -41,7 +41,7 @@ export function subscribe(fn) {
 const emit = () => { for (const fn of subscribers) fn(state); };
 const onError = (error) => { state.error = error; emit(); };
 
-/** Starts (or restarts) the listeners for a farm. */
+/** Starts (or restarts) the listeners for one client. */
 export function startStore(clientId) {
   if (state.clientId === clientId && stops.length) return;
   stopStore();

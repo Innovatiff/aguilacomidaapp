@@ -1,8 +1,8 @@
 /**
  * Home — "is my food coming today, and what do I owe?"
  *
- * Those are the only two questions a farm manager opens this app to answer, so
- * they are the only two things above the fold. Everything else is one tap away.
+ * Those are the only two questions anyone opens this app to answer, so they are
+ * the only two things above the fold. Everything else is one tap away.
  */
 
 import { h } from '../lib/dom.js';
@@ -73,7 +73,11 @@ function trackingCard() {
       h('div.hero__eyebrow', 'Entrega de hoy'),
       h('div.hero__title', meta.clientText),
       h('p.hero__note',
-        [plural(delivery.meals, 'comida', 'comidas'), delivery.window].filter(Boolean).join(' · ')),
+        [
+          plural(delivery.meals, 'comida', 'comidas'),
+          delivery.window,
+          delivery.locationName || store.client?.locationName,
+        ].filter(Boolean).join(' · ')),
       delivery.status === 'delivered'
         ? h('div', { style: { marginTop: '14px' } }, meter(100, { tone: 'ok', large: true }))
         : null),
@@ -87,7 +91,7 @@ function trackingCard() {
         ? alert(
             delivery.status === 'issue'
               ? (delivery.notes || 'Hubo un problema con la entrega de hoy. La cocina te contactará.')
-              : 'Hoy no hay servicio programado para tu rancho.',
+              : 'Hoy no hay servicio programado.',
             delivery.status === 'issue' ? 'bad' : 'warn')
         : trackingSteps(delivery),
 
@@ -185,7 +189,7 @@ function fortnightCard() {
 const servesToday = () =>
   store.client?.status === 'active' && (store.client?.deliveryDays || []).includes(new Date().getDay());
 
-/** The next weekday this farm is served, phrased for a person. */
+/** The next weekday this person is served, phrased for a person. */
 function nextServiceLabel() {
   const days = store.client?.deliveryDays || [];
   if (!days.length) return 'próximo día de servicio';

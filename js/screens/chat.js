@@ -23,7 +23,7 @@ export function renderChat(context) {
 
   function draw() {
     if (!clientId) {
-      screen({ title: 'Mensajes', tab: 'chat', body: h('div.page__inner', alert('Conecta tu rancho para escribir a la cocina.', 'info')) });
+      screen({ title: 'Mensajes', tab: 'chat', body: h('div.page__inner', alert('Falta registrarte para escribir a la cocina.', 'info')) });
       return;
     }
 

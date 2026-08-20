@@ -22,11 +22,11 @@ export function renderUnregistered(host) {
         h('span', { style: { color: 'var(--brand-500)' } }, icon('eagle')),
         h('div',
           h('div.auth__name', 'El Águila Cocina'),
-          h('div.auth__tag', 'Para nuestros ranchos'))),
-      h('h1.auth__lede', 'Falta registrar tu rancho'),
+          h('div.auth__tag', 'Para nuestros clientes'))),
+      h('h1.auth__lede', 'Falta registrarte'),
       h('p.auth__sub',
         'Entraste bien, pero la cocina todavía no ha registrado este correo '
-        + 'para ningún rancho.')),
+        + 'para ningún cliente.')),
 
     h('div.auth__body.stack.stack-4',
       h('div.card',
@@ -42,7 +42,7 @@ export function renderUnregistered(host) {
             h('span', { style: { color: 'var(--brand-500)' } }, icon('phone')),
             h('div.w-650', 'Qué hacer')),
           h('p.t-sm.c-soft', { style: { lineHeight: '1.5' } },
-            'Llama a la cocina y pídeles que registren tu rancho con este '
+            'Llama a la cocina y pídeles que te registren con este '
             + 'mismo correo. En cuanto lo hagan, esta pantalla se convierte '
             + 'en tu app sola — no tienes que volver a entrar.'),
           button('Copiar mi correo', {
