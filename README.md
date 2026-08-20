@@ -61,30 +61,24 @@ Abre `http://localhost:5174`. Agrega `localhost` en
 > Los módulos ES no funcionan abriendo `index.html` con `file://`. Usa un
 > servidor.
 
-### Publicar desde GitHub
+### Publicar en Netlify
 
-`.github/workflows/deploy.yml` publica la app en cada push a la rama de
-trabajo. Configúralo una sola vez:
+Netlify vigila la rama del repositorio y sube cada push. No hay build — la raíz
+del repositorio *es* el sitio, y `netlify.toml` ya trae la configuración.
 
-1. **Crea el sitio de Hosting** (una vez): consola de Firebase → **Hosting →
-   Agregar otro sitio** → `aguila-clientes`.
-2. **Genera una llave de servicio**: **Configuración del proyecto → Cuentas de
-   servicio → Generar nueva clave privada**. Se descarga un `.json`.
-3. **Guárdala como secreto**: repositorio → **Settings → Secrets and variables
-   → Actions → New repository secret**, con el nombre
-   `FIREBASE_SERVICE_ACCOUNT` y todo el contenido del `.json`.
+| Campo | Valor |
+|---|---|
+| Branch to deploy | `claude/el-aguila-cocina-app-yo40te` |
+| Build command | *(vacío)* |
+| Publish directory | `.` |
 
-También puedes lanzarlo a mano desde **Actions → Publicar → Run workflow**.
+**Autoriza el dominio en Firebase.** Sin esto el inicio de sesión de los
+ranchos falla con `auth/unauthorized-domain`: consola de Firebase →
+**Authentication → Settings → Authorized domains → Add domain**, con el dominio
+de Netlify de *esta* app (es distinto al del panel de la cocina).
 
-> Las reglas de Firestore **no** se publican desde aquí: viven en
-> `aguilacomidasoftware` y las despliega el workflow de ese repositorio, para
-> que no existan dos copias que se desincronicen.
-
-Si prefieres hacerlo desde tu máquina:
-
-```sh
-firebase deploy --only hosting:clientes
-```
+> Las reglas de Firestore no se publican desde aquí: viven en
+> `aguilacomidasoftware`, para que no existan dos copias que se desincronicen.
 
 ---
 
