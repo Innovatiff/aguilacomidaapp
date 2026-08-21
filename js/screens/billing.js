@@ -43,7 +43,7 @@ function body() {
   const due = outstanding(store.invoices);
   const receipts = store.receipts || [];
 
-  return h('div.page__inner.stack.stack-4',
+  return h('div.page__inner.page__inner--flow.stack.stack-4',
     balanceCard(summary),
     runningPeriodCard(),
 

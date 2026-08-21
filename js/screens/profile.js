@@ -26,7 +26,7 @@ export function renderProfile() {
     subtitle: store.client?.name || '',
     tab: 'profile',
     sunken: true,
-    body: h('div.page__inner.stack.stack-4',
+    body: h('div.page__inner.page__inner--flow.stack.stack-4',
       accountCard(),
       store.client ? farmCard() : null,
       store.client ? termsCard() : null,

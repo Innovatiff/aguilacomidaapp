@@ -10,7 +10,7 @@
  */
 
 import { $ } from './lib/dom.js';
-import { configureShell, setTabBadge, splash, notePath, screen } from './ui/shell.js';
+import { configureShell, clearShell, setTabBadge, splash, notePath, screen } from './ui/shell.js';
 import { register, setNotFound, start, go, onNavigate } from './lib/router.js';
 import { startSession, watchSession, session } from './data/session.js';
 import { startStore, stopStore, subscribe, unreadCount } from './data/store.js';
@@ -61,20 +61,24 @@ function enter(next, clientId = null) {
   phase = next;
 
   if (next === 'auth') {
-    host.replaceChildren();
+    clearShell(host);
     renderAuth(host);
     return;
   }
 
   if (next === 'unregistered') {
-    host.replaceChildren();
+    clearShell(host);
     renderUnregistered(host);
     return;
   }
 
   linkedTo = clientId;
   host.replaceChildren();
-  configureShell({ mount: host, tabs: TABS });
+  configureShell({
+    mount: host,
+    tabs: TABS,
+    brand: { name: 'El Águila', sub: 'Mi cuenta' },
+  });
   startStore(clientId);
   stopBadge = subscribe(() => setTabBadge('chat', unreadCount()));
 

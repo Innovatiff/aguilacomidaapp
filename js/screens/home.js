@@ -37,8 +37,8 @@ export function renderHome() {
 }
 
 function body() {
-  return h('div.page__inner.stack.stack-4',
-    isPaused() ? pausedNotice() : null,
+  return h('div.page__inner.page__inner--flow.stack.stack-4',
+    isPaused() ? h('div.span-all', pausedNotice()) : null,
     trackingCard(),
     paymentCard(),
     fortnightCard(),
