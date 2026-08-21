@@ -13,10 +13,10 @@ import {
 import { toastOk, toastBad, confirm, sheet } from '../ui/overlay.js';
 import { go } from '../lib/router.js';
 import { session, signOutNow, updateOwnProfile } from '../data/session.js';
-import { store, subscribe } from '../data/store.js';
+import { store, subscribe, fortnightPrice } from '../data/store.js';
 import { clientStatusMeta } from '../lib/model.js';
 import { formatDayLong, today, WEEKDAYS_SHORT, capitalize } from '../lib/dates.js';
-import { money, moneyFull, number, phone as fmtPhone } from '../lib/format.js';
+import { moneyFull, plural, phone as fmtPhone } from '../lib/format.js';
 import { PERIOD_DAYS } from '../lib/billing.js';
 import { dbMessage } from '../firebase.js';
 
@@ -68,6 +68,7 @@ export function renderProfile() {
 
   function termsCard() {
     const client = store.client;
+    const price = fortnightPrice();
     const order = [1, 2, 3, 4, 5, 6, 0];
     const days = order
       .filter((day) => (client.deliveryDays || []).includes(day))
@@ -77,19 +78,17 @@ export function renderProfile() {
     return h('div.stack.stack-3',
       sectionLabel('Condiciones acordadas'),
       card(defList([
-        defRow('Comidas por día', number(client.mealsPerDay)),
-        defRow('Precio por comida', moneyFull(client.pricePerMeal)),
+        defRow('Mi plan', `${plural(client.mealsPerDay, 'comida', 'comidas')} al día`),
         defRow('Días de servicio', days || '—'),
         defRow('Horario', client.deliveryWindow || '—'),
         defRow('Ciclo de cobro', `Cada ${PERIOD_DAYS} días`),
         defRow('Inicio del ciclo', formatDayLong(client.cycleAnchor || today())),
-        defRow('Estimado por quincena',
-          money((Number(client.mealsPerDay) || 0) * (Number(client.pricePerMeal) || 0) * 12, { round: true })),
+        defRow('Precio por quincena', price ? moneyFull(price) : 'Pregúntanos', { total: true }),
       ])),
       h('p.t-xs.c-faint', client.farmName
-        ? `Estas condiciones las acordó la cocina con ${client.farmName}. El estimado supone `
-          + '12 días de servicio; se cobra únicamente lo entregado.'
-        : 'El estimado supone 12 días de servicio. Se cobra únicamente lo entregado.'));
+        ? `Los días y el horario los acordó la cocina con ${client.farmName}. El precio es por `
+          + 'quincena completa y puedes pagarlo antes, durante o después.'
+        : 'El precio es por quincena completa y puedes pagarlo antes, durante o después.'));
   }
 
   /**

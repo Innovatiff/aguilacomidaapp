@@ -10,9 +10,12 @@
 import { watchClient } from './clients.js';
 import { watchDay, watchHistory } from './deliveries.js';
 import { watchInvoices } from './invoices.js';
+import { watchReceipts } from './receipts.js';
 import { watchConversation } from './chat.js';
 import { today } from '../lib/dates.js';
 import { summarize, periodFor, projectPeriod } from '../lib/billing.js';
+import { watchPricing } from './pricing.js';
+import { DEFAULT_TIERS, priceFor } from '../lib/pricing.js';
 
 const state = {
   clientId: null,
@@ -20,6 +23,9 @@ const state = {
   todayDelivery: null,
   history: [],
   invoices: [],
+  receipts: [],
+  // The price list, so the running fortnight can be quoted before it is billed.
+  pricing: [...DEFAULT_TIERS],
   conversation: null,
   day: today(),
   loaded: { client: false, today: false, history: false, invoices: false },
@@ -70,6 +76,18 @@ export function startStore(clientId) {
       emit();
     }, onError),
 
+    watchReceipts(clientId, (rows) => {
+      state.receipts = rows;
+      emit();
+    }, () => {}),
+
+    // Not fatal if it fails: every issued invoice already carries its own
+    // amount, and this only quotes the fortnight that has not been billed yet.
+    watchPricing((tiers) => {
+      state.pricing = tiers;
+      emit();
+    }, () => {}),
+
     watchConversation(clientId, (row) => {
       state.conversation = row;
       emit();
@@ -117,7 +135,8 @@ export function stopStore() {
   dayWatch = null;
   Object.assign(state, {
     clientId: null, client: null, todayDelivery: null, history: [],
-    invoices: [], conversation: null, error: null,
+    invoices: [], receipts: [], pricing: [...DEFAULT_TIERS],
+    conversation: null, error: null,
     loaded: { client: false, today: false, history: false, invoices: false },
   });
 }
@@ -129,11 +148,14 @@ export const billing = () => (state.client ? summarize(state.client, state.invoi
 export const currentPeriod = () =>
   (state.client ? periodFor(state.client.cycleAnchor || today(), today()) : null);
 
-/** What the running fortnight is shaping up to cost, at the agreed terms. */
+/** What the running fortnight costs, at the price of this person's plan. */
 export const periodEstimate = () => {
   const period = currentPeriod();
-  return period && state.client ? projectPeriod(state.client, period) : null;
+  return period && state.client ? projectPeriod(state.client, period, state.pricing) : null;
 };
+
+/** The flat price of one fortnight on this person's plan. */
+export const fortnightPrice = () => priceFor(state.pricing, state.client?.mealsPerDay);
 
 /** Days of the current period already delivered. */
 export const deliveredThisPeriod = () => {

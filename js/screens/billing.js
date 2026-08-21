@@ -1,9 +1,10 @@
 /**
- * Pagos — what is owed, by when, and everything already paid.
+ * Pagos — what is owed, by when, and every receipt already issued.
  *
- * The farm cannot change any of it; the point is that they can see it without
+ * Nobody can change any of it here; the point is that they can see it without
  * calling the kitchen, which is the phone call this whole product exists to
- * stop having.
+ * stop having. The receipts matter most: people pay cash at the store and walk
+ * out with nothing in their hand, so the folio on this screen is the proof.
  */
 
 import { h } from '../lib/dom.js';
@@ -15,13 +16,15 @@ import {
 } from '../ui/kit.js';
 import { balanceHeadline } from '../ui/balance.js';
 import { go } from '../lib/router.js';
-import { store, subscribe, billing, currentPeriod, periodEstimate } from '../data/store.js';
-import { outstanding, paymentHistory, balanceOf, invoiceStatus } from '../data/invoices.js';
+import { store, subscribe, billing, currentPeriod, periodEstimate, fortnightPrice } from '../data/store.js';
+import { outstanding, balanceOf, invoiceStatus } from '../data/invoices.js';
+import { totalPaid } from '../data/receipts.js';
 import { sheet } from '../ui/overlay.js';
 import { STATUS_LABEL, STATUS_TONE, PERIOD_DAYS } from '../lib/billing.js';
 import { paymentMethodMeta } from '../lib/model.js';
-import { formatRange, formatDay, formatDayLong, humanDelta, today, daysBetween } from '../lib/dates.js';
-import { money, moneyFull, number, percent } from '../lib/format.js';
+import { formatRange, formatDay, formatDayLong, formatStamp, humanDelta, today, daysBetween } from '../lib/dates.js';
+import { money, moneyFull, number, percent, plural } from '../lib/format.js';
+import { toDate } from '../firebase.js';
 
 export function renderBilling() {
   const draw = () => screen({
@@ -38,7 +41,7 @@ export function renderBilling() {
 function body() {
   const summary = billing();
   const due = outstanding(store.invoices);
-  const payments = paymentHistory(store.invoices);
+  const receipts = store.receipts || [];
 
   return h('div.page__inner.stack.stack-4',
     balanceCard(summary),
@@ -47,10 +50,13 @@ function body() {
     due.length ? sectionLabel('Por pagar') : null,
     due.length ? list(due.map(invoiceRow), { card: true }) : null,
 
-    sectionLabel('Historial de pagos'),
-    payments.length
-      ? list(payments.slice(0, 20).map(paymentRow), { card: true })
-      : card(h('p.t-sm.c-soft.center', 'Todavía no hay pagos registrados.')),
+    sectionLabel('Mis recibos', receipts.length
+      ? h('span.t-sm.c-soft', `${money(totalPaid(receipts), { round: true })} pagados`)
+      : null),
+    receipts.length
+      ? list(receipts.slice(0, 20).map(receiptRow), { card: true })
+      : card(h('p.t-sm.c-soft.center',
+          'Todavía no hay pagos. Cuando pagues en la cocina, tu recibo aparece aquí solo.')),
 
     h('p.t-xs.c-faint.center', { style: { marginTop: '8px' } },
       'Los montos los registra la cocina. Si algo no coincide, escríbenos.'));
@@ -97,8 +103,12 @@ function runningPeriodCard() {
         h('span.w-700', money(estimate.amount, { round: true }))),
       meter(percent(elapsed, PERIOD_DAYS)),
       h('div.t-xs.c-faint',
-        `${estimate.days} días de servicio · ${number(estimate.meals)} comidas estimadas a ${money(store.client?.pricePerMeal || 0)} cada una`),
-      alert('Este es un estimado. La cocina cobra únicamente las comidas entregadas.', 'info'))));
+        `${plural(store.client?.mealsPerDay || 0, 'comida', 'comidas')} al día · `
+        + `${estimate.days} días de servicio · ${number(estimate.meals)} comidas`),
+      fortnightPrice()
+        ? alert('Es el precio de tu plan por quincena completa. Puedes pagarlo antes, durante o '
+          + 'después — en la cocina te dan tu recibo al momento.', 'info')
+        : alert('Pregúntanos el precio de tu quincena.', 'info'))));
 }
 
 /* --- Rows --------------------------------------------------------------------- */
@@ -107,7 +117,7 @@ function invoiceRow(invoice) {
   const status = invoice.uiStatus || invoiceStatus(invoice, today());
   return itemRow({
     title: formatRange(invoice.periodStart, invoice.periodEnd),
-    meta: `${status === 'overdue' ? 'Venció' : 'Vence'} ${formatDay(invoice.dueDate)} · ${number(invoice.meals)} comidas`,
+    meta: `${status === 'overdue' ? 'Venció' : 'Vence'} ${formatDay(invoice.dueDate)} · ${moneyFull(invoice.amount)}`,
     end: [
       h('span.w-700', money(balanceOf(invoice), { round: true })),
       badge(STATUS_LABEL[status], STATUS_TONE[status]),
@@ -116,14 +126,70 @@ function invoiceRow(invoice) {
   });
 }
 
-function paymentRow(payment) {
-  const meta = paymentMethodMeta(payment.method);
+function receiptRow(receipt) {
+  const meta = paymentMethodMeta(receipt.method);
+  const reversal = Number(receipt.amount) < 0;
+
   return itemRow({
-    lead: h('div.avatar.avatar--sm', { style: { background: 'var(--ok-50)', color: 'var(--ok-600)' } }, icon(meta.icon)),
-    title: money(payment.amount),
-    meta: [meta.label, payment.date ? formatDay(payment.date) : null].filter(Boolean).join(' · '),
-    end: h('span.t-xs.c-faint', formatRange(payment.invoice.periodStart, payment.invoice.periodEnd)),
-    chevron: false,
+    lead: h('div.avatar.avatar--sm', {
+      style: reversal
+        ? { background: 'var(--bad-50)', color: 'var(--bad-600)' }
+        : { background: 'var(--ok-50)', color: 'var(--ok-600)' },
+    }, icon(reversal ? 'refresh' : meta.icon)),
+    title: money(receipt.amount),
+    meta: [receipt.folio, meta.label, receipt.date ? formatDay(receipt.date) : null]
+      .filter(Boolean).join(' · '),
+    end: reversal ? badge('Cancelado', 'bad') : null,
+    onClick: () => openReceipt(receipt),
+  });
+}
+
+/**
+ * The receipt itself.
+ *
+ * Shown as it would be on paper — amount, folio, what it covered — because
+ * that is what somebody opens when they are asked "did you pay?".
+ */
+function openReceipt(receipt) {
+  const reversal = Number(receipt.amount) < 0;
+
+  return sheet({
+    title: receipt.folio || 'Recibo',
+    build: () => h('div.stack.stack-4',
+      h('div.receipt',
+        h('div.receipt__mark', icon(reversal ? 'refresh' : 'check')),
+        h('div.receipt__amount', money(Math.abs(receipt.amount))),
+        h('div.receipt__what', reversal ? 'Pago cancelado' : 'Pago recibido'),
+        h('div.receipt__folio', receipt.folio || '')),
+
+      card(defList([
+        defRow('Forma de pago', paymentMethodMeta(receipt.method).label),
+        receipt.reference ? defRow('Referencia', receipt.reference) : null,
+        defRow('Fecha', formatDayLong(receipt.date)),
+        receipt.takenByName ? defRow('Recibió', receipt.takenByName) : null,
+        receipt.at ? defRow('Registrado', formatStamp(toDate(receipt.at))) : null,
+      ].filter(Boolean))),
+
+      (receipt.applied || []).length
+        ? h('div.stack.stack-2',
+            h('div.section-label', { style: { padding: '4px 0' } }, 'Quincenas que cubre'),
+            list((receipt.applied || []).map((row) => itemRow({
+              title: formatRange(row.periodStart, row.periodEnd),
+              meta: 'Quincena',
+              end: h('span.w-700', money(row.amount)),
+              chevron: false,
+            })), { card: true }))
+        : null,
+
+      alert((receipt.balanceAfter || 0) > 0.005
+        ? `Después de este pago quedaban ${money(receipt.balanceAfter)} pendientes.`
+        : 'Con este pago quedaste al corriente.',
+      (receipt.balanceAfter || 0) > 0.005 ? 'warn' : 'ok'),
+
+      button('Preguntar sobre este recibo', {
+        variant: 'ghost', block: true, icon: 'chat',
+        onClick: () => go('/chat?ask=payment'),
+      })),
   });
 }
 
@@ -146,9 +212,11 @@ function openInvoice(invoice) {
         { tone: balance <= 0 ? 'ok' : status === 'overdue' ? 'bad' : null }),
 
       card(defList([
+        defRow('Plan', invoice.mealsPerDay
+          ? `${number(invoice.mealsPerDay)} ${invoice.mealsPerDay === 1 ? 'comida' : 'comidas'} al día`
+          : '—'),
         defRow('Comidas entregadas', number(invoice.meals)),
-        defRow('Precio por comida', money(invoice.pricePerMeal)),
-        defRow('Total del periodo', moneyFull(invoice.amount)),
+        defRow('Total de la quincena', moneyFull(invoice.amount)),
         defRow('Pagado', money(invoice.paid || 0)),
         defRow('Fecha límite', formatDayLong(invoice.dueDate)),
       ])),

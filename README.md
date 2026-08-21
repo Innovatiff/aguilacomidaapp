@@ -16,15 +16,31 @@ mismo proyecto de Firebase.
 |---|---|
 | **Inicio** | La entrega de hoy en vivo — programada, en cocina, en camino, entregada — y el saldo con su cuenta regresiva |
 | **Entregas** | El historial completo, agrupado por quincena para que cuadre con lo facturado |
-| **Pagos** | Saldo, fecha límite, facturas por periodo y todos los pagos ya registrados |
+| **Pagos** | Saldo, fecha límite, la quincena en curso con su precio, y **todos sus recibos** con folio |
 | **Mensajes** | Un solo hilo con la cocina, con avisos automáticos de pagos y problemas |
-| **Perfil** | Sus datos, dónde recibe su comida — rancho y ubicación — y las condiciones acordadas |
+| **Perfil** | Sus datos, dónde recibe su comida — rancho y ubicación — y su plan con lo que cuesta la quincena |
 
 Cada quien ve **lo suyo y nada más**: trabajar en el mismo rancho, incluso en la
 misma ubicación, no da acceso a la ficha, la cuenta ni el chat del compañero.
 
 Y **no puede modificar nada**: entregas y montos los escribe la cocina. Esta app
 existe para no tener que llamar por teléfono para saber.
+
+---
+
+## El recibo
+
+Se paga en efectivo, en la cocina, y uno se va con las manos vacías. Por eso el
+recibo está aquí: en cuanto la cocina cobra, aparece en **Pagos** con su folio
+(`R-260821-WPUF`), cuánto fue, qué quincenas cubrió y con cuánto quedó la cuenta.
+
+La quincena se puede pagar **antes, durante o después**. El precio es plano — lo
+que cuesta el plan de cada quien — así que se puede pagar una quincena que ni
+siquiera ha empezado, y el recibo lo dice.
+
+Un recibo no se edita ni se borra. Si la cocina cancela un cobro hecho por error,
+aparece un **segundo recibo en negativo**: los dos quedan a la vista, que es la
+única forma de que la cuenta se pueda verificar después.
 
 ---
 
@@ -106,8 +122,10 @@ js/
   data/
     session.js        sesión y a qué cliente pertenece este correo
     clients.js        la ficha propia (sólo lectura)
+    pricing.js        la lista de precios (sólo lectura)
     deliveries.js     entregas (sólo lectura) y la línea de tiempo de seguimiento
-    invoices.js       facturas y pagos (sólo lectura)
+    invoices.js       facturas (sólo lectura)
+    receipts.js       recibos (sólo lectura)
     chat.js           hilo con la cocina
     store.js          escuchas en vivo de esa persona
   ui/                 shell, kit de componentes, hojas, chat, saldo
@@ -132,6 +150,11 @@ teléfono de la cocina y el del cliente.
 documento y ya sabe dónde le dejan la comida y bajo qué condiciones; no tiene
 que consultar el rancho para mostrar «Casa 1».
 
+**La quincena se cobra plana, no por comida.** Lo que se paga es el plan — una o
+dos comidas al día — así que el monto se conoce el día que abre el periodo. Cada
+factura guarda el precio con el que se emitió: si la cocina sube el precio, lo ya
+cobrado no cambia.
+
 **El estado de la factura se calcula al leer.** «Vencido» depende de la fecha de
 hoy; guardarlo en el documento lo dejaría desactualizado al día siguiente.
 
@@ -148,10 +171,11 @@ mala; la app abre y muestra lo último que sabe.
 Las reglas de Firestore confinan cada cuenta a su propia ficha: Firestore evalúa
 las reglas contra cada documento que devolvería una consulta, así que una
 consulta que no filtre por el cliente propio simplemente falla. Nadie puede ver
-a otro, ni sus pagos, ni sus mensajes — ni siquiera quien trabaja en la misma
-ubicación. Lo único compartido es el documento del rancho, que sólo se lee, para
-mostrar su nombre y su horario. Tampoco se puede escribir dinero: las facturas y
-las entregas las escribe la cocina.
+a otro, ni sus pagos, ni sus recibos, ni sus mensajes — ni siquiera quien trabaja
+en la misma ubicación. Lo compartido son dos documentos de sólo lectura: el del
+rancho, para mostrar su nombre y su horario, y la lista de precios. Tampoco se
+puede escribir dinero: las facturas, los recibos y las entregas los escribe la
+cocina.
 
 Quién es cada quien lo decide `clientEmails/{correo}`, un documento que sólo la
 cocina puede escribir. Esta app únicamente lo lee: no hay nada que reclamar ni

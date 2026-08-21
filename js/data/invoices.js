@@ -28,11 +28,5 @@ export const outstanding = (invoices, day = today()) => invoices
 
 export const settledInvoices = (invoices) => invoices.filter((invoice) => balanceOf(invoice) <= 0.005);
 
-/** Every payment ever made, newest first — the farm's own receipt book. */
-export function paymentHistory(invoices) {
-  return invoices
-    .flatMap((invoice) => (invoice.payments || []).map((payment) => ({ ...payment, invoice })))
-    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
-}
 
 export { balanceOf, invoiceStatus };

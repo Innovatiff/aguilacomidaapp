@@ -14,7 +14,8 @@ import {
 import { balanceHeadline } from '../ui/balance.js';
 import { go } from '../lib/router.js';
 import {
-  store, subscribe, billing, currentPeriod, periodEstimate, deliveredThisPeriod, isPaused, isReady,
+  store, subscribe, billing, currentPeriod, periodEstimate, deliveredThisPeriod,
+  fortnightPrice, isPaused, isReady,
 } from '../data/store.js';
 import { timeline } from '../data/deliveries.js';
 import { deliveryMeta } from '../lib/model.js';
@@ -177,9 +178,9 @@ function fortnightCard() {
         foot: `de ${estimate.days} programados`,
       }),
       stat({
-        label: 'Comidas',
-        value: number(meals),
-        foot: `≈ ${money(meals * (Number(store.client?.pricePerMeal) || 0), { round: true })}`,
+        label: 'Esta quincena',
+        value: fortnightPrice() ? money(fortnightPrice(), { round: true }) : '—',
+        foot: `${number(meals)} comidas hasta hoy`,
       }),
     ]));
 }
