@@ -64,6 +64,12 @@ function body() {
 
 /* --- Balance ----------------------------------------------------------------- */
 
+/** How far the kitchen has this person paid up, when it is worth saying. */
+function paidUpTo() {
+  const through = store.client?.paidThrough;
+  return through && through >= today() ? through : null;
+}
+
 function balanceCard(summary) {
   if (!summary) return null;
   const owes = summary.balance > 0;
@@ -78,7 +84,9 @@ function balanceCard(summary) {
             ? `Venció ${humanDelta(days)} — ${formatDayLong(summary.dueDate)}.`
             : `Vence ${humanDelta(days)} — ${formatDayLong(summary.dueDate)}.`,
           summary.status === 'overdue' ? 'bad' : days <= 2 ? 'warn' : 'info')
-      : alert('Estás al corriente con la cocina. Gracias.', 'ok'),
+      : alert(paidUpTo()
+        ? `Estás al corriente. Tienes pagado hasta el ${formatDay(paidUpTo())}.`
+        : 'Estás al corriente con la cocina. Gracias.', 'ok'),
 
     button('Pedir los datos de pago', {
       variant: owes ? 'primary' : 'ghost', block: true, icon: 'chat',
