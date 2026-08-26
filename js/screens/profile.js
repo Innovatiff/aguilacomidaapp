@@ -6,6 +6,7 @@
  */
 
 import { h } from '../lib/dom.js';
+import { icon } from '../lib/icons.js';
 import { screen } from '../ui/shell.js';
 import {
   card, button, badge, avatar, defList, defRow, sectionLabel, alert, field, input,
@@ -29,6 +30,7 @@ export function renderProfile() {
     body: h('div.page__inner.page__inner--flow.stack.stack-4',
       accountCard(),
       store.client ? farmCard() : null,
+      store.client ? dietCard() : null,
       store.client ? termsCard() : null,
       helpCard(),
       aboutCard(),
@@ -64,6 +66,19 @@ export function renderProfile() {
         client.status !== 'active'
           ? alert('Tu servicio está en pausa. Escríbenos para reanudarlo.', 'warn')
           : null)));
+  }
+
+  /** What the kitchen has on file that they cannot eat. */
+  function dietCard() {
+    const tags = store.client?.tags || [];
+    if (!tags.length) return null;
+
+    return h('div.stack.stack-3',
+      sectionLabel('Lo que no comes'),
+      card(h('div.stack.stack-3',
+        h('div.tags.tags--loud', tags.map((tag) => h('span.tag', icon('ban'), tag))),
+        h('p.t-xs.c-faint', 'Es lo que la cocina deja fuera de tu comida. Si falta algo o '
+          + 'sobra, escríbenos y lo corregimos.'))));
   }
 
   function termsCard() {
