@@ -1,14 +1,13 @@
 /**
  * One person's live data.
  *
- * One client, one set of listeners: their own record, today's stop, the recent
- * days, their invoices and their thread with the kitchen. Everything the
- * screens show is derived from these five, so the app never re-queries on
- * navigation and every screen agrees with every other one.
+ * One client, one set of listeners: their own record, their invoices, their
+ * receipts and their thread with the kitchen. Everything the screens show is
+ * derived from those, so the app never re-queries on navigation and every
+ * screen agrees with every other one.
  */
 
 import { watchClient } from './clients.js';
-import { watchDay, watchHistory } from './deliveries.js';
 import { watchInvoices } from './invoices.js';
 import { watchReceipts } from './receipts.js';
 import { watchConversation } from './chat.js';
@@ -20,21 +19,18 @@ import { DEFAULT_PRICING, chargeFor } from '../lib/pricing.js';
 const state = {
   clientId: null,
   client: null,
-  todayDelivery: null,
-  history: [],
   invoices: [],
   receipts: [],
   // The price list, so the running fortnight can be quoted before it is billed.
   pricing: { ...DEFAULT_PRICING },
   conversation: null,
   day: today(),
-  loaded: { client: false, today: false, history: false, invoices: false },
+  loaded: { client: false, invoices: false },
   error: null,
 };
 
 const subscribers = new Set();
 let stops = [];
-let dayWatch = null;
 
 export const store = state;
 
@@ -62,14 +58,6 @@ export function startStore(clientId) {
       emit();
     }, onError),
 
-    watchToday(),
-
-    watchHistory(clientId, 40, (rows) => {
-      state.history = rows;
-      state.loaded.history = true;
-      emit();
-    }, onError),
-
     watchInvoices(clientId, (rows) => {
       state.invoices = rows;
       state.loaded.invoices = true;
@@ -93,51 +81,16 @@ export function startStore(clientId) {
       emit();
     }, () => {}),
   ];
-
-  document.addEventListener('visibilitychange', checkDayRollover);
-}
-
-/**
- * Watches the delivery for whatever day it is *now*.
- *
- * Farms leave the app open. Without this the home screen would still be
- * tracking yesterday's delivery the next morning, which is exactly the
- * moment the screen matters most.
- */
-function watchToday() {
-  dayWatch?.();
-  const day = state.day;
-  dayWatch = watchDay(state.clientId, day, (row) => {
-    if (state.day !== day) return;      // a stale response for a day we left
-    state.todayDelivery = row;
-    state.loaded.today = true;
-    emit();
-  }, onError);
-  return () => dayWatch?.();
-}
-
-/** Rolls the tracked day over when the app comes back to the foreground. */
-function checkDayRollover() {
-  if (document.visibilityState !== 'visible') return;
-  const now = today();
-  if (now === state.day) return;
-  state.day = now;
-  state.todayDelivery = null;
-  state.loaded.today = false;
-  emit();
-  watchToday();
 }
 
 export function stopStore() {
-  document.removeEventListener('visibilitychange', checkDayRollover);
   for (const stop of stops) { try { stop(); } catch { /* already detached */ } }
   stops = [];
-  dayWatch = null;
   Object.assign(state, {
-    clientId: null, client: null, todayDelivery: null, history: [],
+    clientId: null, client: null,
     invoices: [], receipts: [], pricing: { ...DEFAULT_PRICING },
     conversation: null, error: null,
-    loaded: { client: false, today: false, history: false, invoices: false },
+    loaded: { client: false, invoices: false },
   });
 }
 
@@ -157,17 +110,9 @@ export const periodEstimate = () => {
 /** What one fortnight costs: the plan, adjusted for their week and extras. */
 export const fortnightPrice = () => chargeFor(state.client, state.pricing);
 
-/** Days of the current period already delivered. */
-export const deliveredThisPeriod = () => {
-  const period = currentPeriod();
-  if (!period) return [];
-  return state.history.filter((row) =>
-    row.status === 'delivered' && row.date >= period.start && row.date <= period.end);
-};
-
 export const unreadCount = () => Number(state.conversation?.unreadClient) || 0;
 
 /** True when the farm is not being served right now. */
 export const isPaused = () => state.client && state.client.status !== 'active';
 
-export const isReady = () => state.loaded.client && state.loaded.today;
+export const isReady = () => state.loaded.client;

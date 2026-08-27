@@ -1,28 +1,25 @@
 /**
- * Home — "is my food coming today, and what do I owe?"
+ * Home — "what do I owe, and by when?"
  *
- * Those are the only two questions anyone opens this app to answer, so they are
- * the only two things above the fold. Everything else is one tap away.
+ * That is the question this app exists to answer without a phone call, so it is
+ * the first thing on the screen and the biggest. Under it: the fortnight in
+ * progress and what it comes to, the last payment, and the way to ask the
+ * kitchen anything else.
  */
 
 import { h } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { screen, topbarButton } from '../ui/shell.js';
-import {
-  card, button, badge, alert, meter, statGrid, stat, sectionLabel, skeletonRows,
-} from '../ui/kit.js';
+import { card, button, alert, sectionLabel, skeletonRows, defList, defRow } from '../ui/kit.js';
 import { balanceHeadline } from '../ui/balance.js';
 import { go } from '../lib/router.js';
 import {
-  store, subscribe, billing, currentPeriod, periodEstimate, deliveredThisPeriod,
-  fortnightPrice, isPaused, isReady,
+  store, subscribe, billing, currentPeriod, fortnightPrice, isPaused, isReady,
 } from '../data/store.js';
-import { timeline } from '../data/deliveries.js';
-import { deliveryMeta } from '../lib/model.js';
-import {
-  greeting, formatDayLong, today, formatTime, humanDelta, formatDay, formatRange, relativeDay,
-} from '../lib/dates.js';
-import { money, plural, number } from '../lib/format.js';
+import { latest } from '../data/receipts.js';
+import { mealsOn, extrasOf } from '../lib/pricing.js';
+import { greeting, formatDayLong, today, humanDelta, formatDay, formatRange, WEEKDAYS_SHORT } from '../lib/dates.js';
+import { money, plural } from '../lib/format.js';
 
 export function renderHome() {
   const draw = () => screen({
@@ -39,95 +36,17 @@ export function renderHome() {
 function body() {
   return h('div.page__inner.page__inner--flow.stack.stack-4',
     isPaused() ? h('div.span-all', pausedNotice()) : null,
-    trackingCard(),
     paymentCard(),
     fortnightCard(),
-    h('div.stack.stack-2',
+    lastPaymentCard(),
+    h('div.span-all.stack.stack-2',
       button('Escribir a la cocina', { variant: 'dark', block: true, icon: 'chat', onClick: () => go('/chat') }),
-      button('Ver mis entregas', { variant: 'ghost', block: true, icon: 'truck', onClick: () => go('/deliveries') })));
+      button('Ver mis pagos', { variant: 'ghost', block: true, icon: 'wallet', onClick: () => go('/billing') })));
 }
 
 const pausedNotice = () => alert(
-  'Tu servicio está en pausa. Escríbenos si quieres reanudar las entregas.',
+  'Tu servicio está en pausa. Escríbenos si quieres reanudar tus comidas.',
   'warn', 'pause');
-
-/* --- Today ------------------------------------------------------------------ */
-
-function trackingCard() {
-  const delivery = store.todayDelivery;
-
-  if (!delivery) {
-    return card(h('div.stack.stack-3',
-      h('div.row.row--between',
-        h('div.card__title', 'Hoy'),
-        badge('Sin programar', 'muted')),
-      h('p.t-sm.c-soft', servesToday()
-        ? 'Todavía no se programa la entrega de hoy. En cuanto la cocina la registre, la verás aquí en vivo.'
-        : 'Hoy no toca servicio según tu calendario. La próxima entrega será el ' + nextServiceLabel() + '.')));
-  }
-
-  const meta = deliveryMeta(delivery.status);
-  const off = delivery.status === 'skipped' || delivery.status === 'issue';
-
-  return h('div.stack.stack-3',
-    h('div.hero',
-      h('div.hero__eyebrow', 'Entrega de hoy'),
-      h('div.hero__title', meta.clientText),
-      h('p.hero__note',
-        [
-          plural(delivery.meals, 'comida', 'comidas'),
-          delivery.window,
-          delivery.locationName || store.client?.locationName,
-        ].filter(Boolean).join(' · ')),
-      delivery.status === 'delivered'
-        ? h('div', { style: { marginTop: '14px' } }, meter(100, { tone: 'ok', large: true }))
-        : null),
-
-    card(h('div.stack.stack-3',
-      h('div.row.row--between',
-        h('div.card__title', 'Seguimiento'),
-        badge(meta.label, meta.tone, meta.icon)),
-
-      off
-        ? alert(
-            delivery.status === 'issue'
-              ? (delivery.notes || 'Hubo un problema con la entrega de hoy. La cocina te contactará.')
-              : 'Hoy no hay servicio programado.',
-            delivery.status === 'issue' ? 'bad' : 'warn')
-        : trackingSteps(delivery),
-
-      delivery.driver && !off
-        ? h('div.row.t-sm.c-soft',
-            h('span', { style: { color: 'var(--ink-400)' } }, icon('truck')),
-            h('span', `Lleva tu entrega: ${delivery.driver}`))
-        : null,
-
-      off || delivery.status === 'delivered'
-        ? button('Avisar un problema', {
-            variant: 'ghost', size: 'sm', block: true, icon: 'chat',
-            onClick: () => go('/chat'),
-          })
-        : null)));
-}
-
-/** The four-step delivery timeline, with times where they are known. */
-function trackingSteps(delivery) {
-  const steps = timeline(delivery);
-
-  return h('div.track',
-    steps.map((step) => {
-      const meta = deliveryMeta(step.status);
-      const cls = step.done ? '.is-done' : step.current ? '.is-current' : '';
-      return h(`div.track__step${cls}`,
-        h('div.track__mark', icon(step.done ? 'check' : meta.icon)),
-        h('div.grow',
-          h('div.track__label', meta.label),
-          h('div.track__time',
-            step.at ? formatTime(step.at)
-              : step.current ? 'En curso'
-                : step.done ? '' : 'Pendiente')));
-    }));
-}
 
 /* --- Money ------------------------------------------------------------------ */
 
@@ -139,7 +58,7 @@ function paymentCard() {
   const days = summary.daysToDue;
 
   return h('div.stack.stack-3',
-    sectionLabel('Tu pago'),
+    sectionLabel('Tu cuenta'),
     card(h('div.stack.stack-4',
       balanceHeadline(summary),
 
@@ -149,7 +68,9 @@ function paymentCard() {
               ? `Venció ${humanDelta(days)} — ${formatDay(summary.dueDate)}.`
               : `Vence ${humanDelta(days)} — ${formatDay(summary.dueDate)}.`,
             summary.status === 'overdue' ? 'bad' : days <= 2 ? 'warn' : 'info')
-        : alert('Estás al corriente con la cocina. Gracias.', 'ok'),
+        : alert(store.client?.paidThrough && store.client.paidThrough >= today()
+          ? `Estás al corriente. Tienes pagado hasta el ${formatDay(store.client.paidThrough)}.`
+          : 'Estás al corriente con la cocina. Gracias.', 'ok'),
 
       h('div.btn-group',
         button('Pedir datos de pago', {
@@ -163,44 +84,55 @@ function paymentCard() {
 
 function fortnightCard() {
   const period = currentPeriod();
-  const estimate = periodEstimate();
-  if (!period || !estimate) return null;
+  const client = store.client;
+  if (!period || !client) return null;
 
-  const delivered = deliveredThisPeriod();
-  const meals = delivered.reduce((sum, row) => sum + (Number(row.meals) || 0), 0);
+  const price = fortnightPrice();
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  const extras = extrasOf(client);
 
   return h('div.stack.stack-3',
-    sectionLabel(`Quincena en curso · ${formatRange(period.start, period.end)}`),
-    statGrid([
-      stat({
-        label: 'Días entregados',
-        value: number(delivered.length),
-        foot: `de ${estimate.days} programados`,
-      }),
-      stat({
-        label: 'Esta quincena',
-        value: fortnightPrice() ? money(fortnightPrice(), { round: true }) : '—',
-        foot: `${number(meals)} comidas hasta hoy`,
-      }),
-    ]));
+    sectionLabel('Mi quincena'),
+    card(h('div.stack.stack-3',
+      h('div.row.row--between',
+        h('span.t-sm.c-soft', formatRange(period.start, period.end)),
+        h('span.t-lg.w-700', price ? money(price) : '—')),
+
+      h('div.weekstrip', order.map((weekday) => {
+        const meals = mealsOn(client, weekday);
+        const extra = Number(client.extras?.[String(weekday)]) || 0;
+        return h(`div.weekstrip__day${meals ? '' : '.is-off'}${extra ? '.has-extra' : ''}`,
+          h('div.weekstrip__n', meals || '—'),
+          h('div.weekstrip__w', WEEKDAYS_SHORT[weekday]));
+      })),
+
+      defList([
+        defRow('Mi plan', plural(client.mealsPerDay, 'comida al día', 'comidas al día')),
+        extras.length
+          ? defRow('Comidas extra',
+              extras.map((entry) => `${WEEKDAYS_SHORT[entry.weekday]} +${entry.count}`).join(' · '))
+          : null,
+        defRow('Horario', client.deliveryWindow || '—'),
+      ].filter(Boolean)),
+
+      alert('Puedes pagar esta quincena antes, durante o después. En la cocina te dan tu recibo '
+        + 'al momento.', 'info'))));
 }
 
-/* --- Helpers ----------------------------------------------------------------- */
+/* --- The last payment -------------------------------------------------------- */
 
-const servesToday = () =>
-  store.client?.status === 'active' && (store.client?.deliveryDays || []).includes(new Date().getDay());
+function lastPaymentCard() {
+  const last = latest(store.receipts);
+  if (!last) return null;
 
-/** The next weekday this person is served, phrased for a person. */
-function nextServiceLabel() {
-  const days = store.client?.deliveryDays || [];
-  if (!days.length) return 'próximo día de servicio';
-  for (let i = 1; i <= 7; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() + i);
-    if (days.includes(date.getDay())) {
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-      return relativeDay(key).toLowerCase();
-    }
-  }
-  return 'próximo día de servicio';
+  return h('div.stack.stack-3',
+    sectionLabel('Tu último pago'),
+    card(h('div.row',
+      h('span', { style: { color: 'var(--ok-600)' } }, icon('check')),
+      h('div.grow',
+        h('div.t-lg.w-700', money(last.amount)),
+        h('div.t-sm.c-soft', `${formatDayLong(last.date)} · ${last.folio || ''}`)),
+      button('Ver recibo', {
+        variant: 'ghost', size: 'sm', onClick: () => go('/billing'),
+      }))));
 }

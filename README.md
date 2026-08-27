@@ -14,9 +14,8 @@ mismo proyecto de Firebase.
 
 | Pantalla | Para qué |
 |---|---|
-| **Inicio** | La entrega de hoy en vivo — programada, en cocina, en camino, entregada — y el saldo con su cuenta regresiva |
-| **Entregas** | El historial completo, agrupado por quincena para que cuadre con lo facturado |
-| **Pagos** | Saldo, fecha límite, la quincena en curso con su precio, y **todos sus recibos** con folio |
+| **Inicio** | Su saldo con la cuenta regresiva, la quincena en curso con su semana y su precio, y su último pago |
+| **Pagos** | Saldo, fecha límite, facturas por periodo y **todos sus recibos** con folio |
 | **Mensajes** | Un solo hilo con la cocina, con avisos automáticos de pagos y problemas |
 | **Perfil** | Sus datos, dónde recibe su comida — rancho y ubicación — y su plan con lo que cuesta la quincena |
 
@@ -123,13 +122,12 @@ js/
     session.js        sesión y a qué cliente pertenece este correo
     clients.js        la ficha propia (sólo lectura)
     pricing.js        la lista de precios (sólo lectura)
-    deliveries.js     entregas (sólo lectura) y la línea de tiempo de seguimiento
     invoices.js       facturas (sólo lectura)
     receipts.js       recibos (sólo lectura)
     chat.js           hilo con la cocina
     store.js          escuchas en vivo de esa persona
   ui/                 shell, kit de componentes, hojas, chat, saldo
-  screens/            login, unregistered, home, deliveries, billing, chat, profile
+  screens/            login, unregistered, home, billing, chat, profile
 ```
 
 `css/`, `js/lib/`, `js/ui/` y `js/firebase.js` son idénticos a los del panel de
@@ -137,10 +135,6 @@ la cocina — es el mismo sistema de diseño y la misma capa base. Si cambias al
 ahí, cópialo al otro repositorio.
 
 ### Decisiones que conviene conocer
-
-**El seguimiento no es trabajo extra para la cocina.** El chofer avanza la
-parada en su panel porque necesita hacerlo de todas formas; esta app lee ese
-mismo documento. No hay un segundo sistema que mantener sincronizado.
 
 **Los días son cadenas `YYYY-MM-DD`, no marcas de tiempo.** Una entrega ocurre
 el martes, no a las 19:00 UTC — eso elimina los errores de zona horaria entre el

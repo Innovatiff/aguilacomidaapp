@@ -17,7 +17,6 @@ import { startStore, stopStore, subscribe, unreadCount } from './data/store.js';
 import { renderAuth } from './screens/login.js';
 import { renderUnregistered } from './screens/unregistered.js';
 import { renderHome } from './screens/home.js';
-import { renderDeliveries } from './screens/deliveries.js';
 import { renderBilling } from './screens/billing.js';
 import { renderChat } from './screens/chat.js';
 import { renderProfile } from './screens/profile.js';
@@ -25,7 +24,6 @@ import { button, emptyState } from './ui/kit.js';
 
 const TABS = [
   { id: 'home',       path: '/',           label: 'Inicio',   icon: 'home' },
-  { id: 'deliveries', path: '/deliveries', label: 'Entregas', icon: 'truck' },
   { id: 'billing',    path: '/billing',    label: 'Pagos',    icon: 'wallet' },
   { id: 'chat',       path: '/chat',       label: 'Mensajes', icon: 'chat' },
   { id: 'profile',    path: '/profile',    label: 'Perfil',   icon: 'settings' },
@@ -92,7 +90,6 @@ function enter(next, clientId = null) {
 
 function registerRoutes() {
   register('/', renderHome);
-  register('/deliveries', renderDeliveries);
   register('/billing', renderBilling);
   register('/chat', renderChat);
   register('/profile', renderProfile);
