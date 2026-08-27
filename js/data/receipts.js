@@ -33,5 +33,26 @@ export function watchReceipt(id, onData, onError) {
 export const totalPaid = (receipts) =>
   Math.round((receipts || []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0) * 100) / 100;
 
-/** The most recent receipt, or null — the one worth showing on the home screen. */
-export const latest = (receipts) => (receipts || []).find((row) => Number(row.amount) > 0) || null;
+/**
+ * The receipts that were taken back.
+ *
+ * A cancelled payment is not marked on the receipt itself — the rules forbid
+ * touching it, and they should: it is the only copy this person holds. What
+ * exists instead is a second, negative receipt pointing back at it. So the
+ * question "was this one cancelled?" is answered by looking for that pointer,
+ * and every screen that shows a receipt has to ask it. One that does not shows
+ * somebody "Pago recibido" for money the kitchen already took back off their
+ * account — which is the screen they will hold up at the counter.
+ */
+export const cancelledIds = (receipts) =>
+  new Set((receipts || []).map((row) => row.reversalOf).filter(Boolean));
+
+export const wasCancelled = (receipt, receipts) =>
+  !!receipt && cancelledIds(receipts).has(receipt.id);
+
+/** The most recent payment that still stands — the one worth showing on Inicio. */
+export function latest(receipts) {
+  const voided = cancelledIds(receipts);
+  return (receipts || []).find(
+    (row) => Number(row.amount) > 0 && !voided.has(row.id)) || null;
+}

@@ -18,7 +18,7 @@ import { balanceHeadline } from '../ui/balance.js';
 import { go } from '../lib/router.js';
 import { store, subscribe, billing, currentPeriod, periodEstimate, fortnightPrice } from '../data/store.js';
 import { outstanding, balanceOf, invoiceStatus } from '../data/invoices.js';
-import { totalPaid } from '../data/receipts.js';
+import { totalPaid, cancelledIds } from '../data/receipts.js';
 import { sheet } from '../ui/overlay.js';
 import {
   STATUS_LABEL, STATUS_TONE, PERIOD_DAYS, isCharge, invoiceTitle, appliedTitle,
@@ -56,7 +56,8 @@ function body() {
       ? h('span.t-sm.c-soft', `${money(totalPaid(receipts), { round: true })} pagados`)
       : null),
     receipts.length
-      ? list(receipts.slice(0, 20).map(receiptRow), { card: true })
+      ? list(receipts.slice(0, 20).map(
+          (row) => receiptRow(row, cancelledIds(receipts).has(row.id))), { card: true })
       : card(h('p.t-sm.c-soft.center',
           'Todavía no hay pagos. Cuando pagues en la cocina, tu recibo aparece aquí solo.')),
 
@@ -137,21 +138,29 @@ function invoiceRow(invoice) {
   });
 }
 
-function receiptRow(receipt) {
+/**
+ * `wasCancelled` is the payment the kitchen took back off the account.
+ *
+ * It has to keep showing — it is this person's own record and it did happen —
+ * but it must say so on its face. A row that still reads "Pago recibido" for
+ * money that no longer counts is the screen somebody holds up at the counter.
+ */
+function receiptRow(receipt, wasCancelled = false) {
   const meta = paymentMethodMeta(receipt.method);
   const reversal = Number(receipt.amount) < 0;
+  const dead = reversal || wasCancelled;
 
   return itemRow({
     lead: h('div.avatar.avatar--sm', {
-      style: reversal
+      style: dead
         ? { background: 'var(--bad-50)', color: 'var(--bad-600)' }
         : { background: 'var(--ok-50)', color: 'var(--ok-600)' },
-    }, icon(reversal ? 'refresh' : meta.icon)),
-    title: money(receipt.amount),
+    }, icon(dead ? 'refresh' : meta.icon)),
+    title: h(`span${wasCancelled ? '.is-void' : ''}`, money(receipt.amount)),
     meta: [receipt.folio, meta.label, receipt.date ? formatDay(receipt.date) : null]
       .filter(Boolean).join(' · '),
-    end: reversal ? badge('Cancelado', 'bad') : null,
-    onClick: () => openReceipt(receipt),
+    end: dead ? badge('Cancelado', 'bad') : null,
+    onClick: () => openReceipt(receipt, wasCancelled),
   });
 }
 
@@ -161,17 +170,25 @@ function receiptRow(receipt) {
  * Shown as it would be on paper — amount, folio, what it covered — because
  * that is what somebody opens when they are asked "did you pay?".
  */
-function openReceipt(receipt) {
+function openReceipt(receipt, wasCancelled = false) {
   const reversal = Number(receipt.amount) < 0;
+  const dead = reversal || wasCancelled;
 
   return sheet({
     title: receipt.folio || 'Recibo',
     build: () => h('div.stack.stack-4',
-      h('div.receipt',
-        h('div.receipt__mark', icon(reversal ? 'refresh' : 'check')),
+      h('div.receipt', { class: dead ? 'is-void' : '' },
+        h('div.receipt__mark', icon(dead ? 'refresh' : 'check')),
         h('div.receipt__amount', money(Math.abs(receipt.amount))),
-        h('div.receipt__what', reversal ? 'Pago cancelado' : 'Pago recibido'),
+        h('div.receipt__what', reversal
+          ? 'Pago cancelado'
+          : wasCancelled ? 'Este pago fue cancelado' : 'Pago recibido'),
         h('div.receipt__folio', receipt.folio || '')),
+
+      wasCancelled
+        ? alert('La cocina canceló este pago. El monto volvió a tu saldo; abajo está el '
+          + 'recibo de la cancelación. Si no sabes por qué, escríbenos.', 'bad')
+        : null,
 
       card(defList([
         defRow('Forma de pago', paymentMethodMeta(receipt.method).label),
@@ -192,10 +209,15 @@ function openReceipt(receipt) {
             })), { card: true }))
         : null,
 
-      alert((receipt.balanceAfter || 0) > 0.005
-        ? `Después de este pago quedaban ${money(receipt.balanceAfter)} pendientes.`
-        : 'Con este pago quedaste al corriente.',
-      (receipt.balanceAfter || 0) > 0.005 ? 'warn' : 'ok'),
+      // Only true while the payment still stands. Saying "quedaste al
+      // corriente" under a cancelled receipt would be the most misleading line
+      // on the screen.
+      dead
+        ? null
+        : alert((receipt.balanceAfter || 0) > 0.005
+          ? `Después de este pago quedaban ${money(receipt.balanceAfter)} pendientes.`
+          : 'Con este pago quedaste al corriente.',
+        (receipt.balanceAfter || 0) > 0.005 ? 'warn' : 'ok'),
 
       button('Preguntar sobre este recibo', {
         variant: 'ghost', block: true, icon: 'chat',
