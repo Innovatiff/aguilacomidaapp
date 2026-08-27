@@ -20,7 +20,9 @@ import { store, subscribe, billing, currentPeriod, periodEstimate, fortnightPric
 import { outstanding, balanceOf, invoiceStatus } from '../data/invoices.js';
 import { totalPaid } from '../data/receipts.js';
 import { sheet } from '../ui/overlay.js';
-import { STATUS_LABEL, STATUS_TONE, PERIOD_DAYS } from '../lib/billing.js';
+import {
+  STATUS_LABEL, STATUS_TONE, PERIOD_DAYS, isCharge, invoiceTitle, appliedTitle,
+} from '../lib/billing.js';
 import { paymentMethodMeta } from '../lib/model.js';
 import { formatRange, formatDay, formatDayLong, formatStamp, humanDelta, today, daysBetween } from '../lib/dates.js';
 import { money, moneyFull, number, percent, plural } from '../lib/format.js';
@@ -124,8 +126,9 @@ function runningPeriodCard() {
 function invoiceRow(invoice) {
   const status = invoice.uiStatus || invoiceStatus(invoice, today());
   return itemRow({
-    title: formatRange(invoice.periodStart, invoice.periodEnd),
-    meta: `${status === 'overdue' ? 'Venció' : 'Vence'} ${formatDay(invoice.dueDate)} · ${moneyFull(invoice.amount)}`,
+    title: invoiceTitle(invoice),
+    meta: `${status === 'overdue' ? 'Venció' : 'Vence'} ${formatDay(invoice.dueDate)} · ${moneyFull(invoice.amount)}`
+      + `${isCharge(invoice) ? ' · cargo' : ''}`,
     end: [
       h('span.w-700', money(balanceOf(invoice), { round: true })),
       badge(STATUS_LABEL[status], STATUS_TONE[status]),
@@ -180,10 +183,10 @@ function openReceipt(receipt) {
 
       (receipt.applied || []).length
         ? h('div.stack.stack-2',
-            h('div.section-label', { style: { padding: '4px 0' } }, 'Quincenas que cubre'),
+            h('div.section-label', { style: { padding: '4px 0' } }, 'Qué cubre'),
             list((receipt.applied || []).map((row) => itemRow({
-              title: formatRange(row.periodStart, row.periodEnd),
-              meta: 'Quincena',
+              title: appliedTitle(row),
+              meta: row.kind === 'charge' ? 'Cargo' : 'Quincena',
               end: h('span.w-700', money(row.amount)),
               chevron: false,
             })), { card: true }))
@@ -208,7 +211,7 @@ function openInvoice(invoice) {
   const balance = balanceOf(invoice);
 
   return sheet({
-    title: formatRange(invoice.periodStart, invoice.periodEnd),
+    title: invoiceTitle(invoice),
     build: () => h('div.stack.stack-4',
       h('div.row.row--between',
         h('div',
@@ -219,19 +222,35 @@ function openInvoice(invoice) {
       meter(percent(Number(invoice.paid) || 0, Number(invoice.amount) || 0),
         { tone: balance <= 0 ? 'ok' : status === 'overdue' ? 'bad' : null }),
 
-      card(defList([
-        defRow('Plan', invoice.mealsPerDay
-          ? `${number(invoice.mealsPerDay)} ${invoice.mealsPerDay === 1 ? 'comida' : 'comidas'} al día`
-          : '—'),
-        defRow('Comidas entregadas', number(invoice.meals)),
-        defRow('Total de la quincena', moneyFull(invoice.amount)),
-        defRow('Pagado', money(invoice.paid || 0)),
-        defRow('Fecha límite', formatDayLong(invoice.dueDate)),
-      ])),
+      // A cargo is not a fortnight of food: it says what it was for and when,
+      // rather than a plan and a meal count that were never counted.
+      card(defList(isCharge(invoice)
+        ? [
+            defRow('Concepto', invoice.reason || 'Cargo'),
+            defRow('Fecha', formatDayLong(invoice.periodStart)),
+            defRow('Total', moneyFull(invoice.amount)),
+            defRow('Pagado', money(invoice.paid || 0)),
+            defRow('Fecha límite', formatDayLong(invoice.dueDate)),
+          ]
+        : [
+            defRow('Plan', invoice.mealsPerDay
+              ? `${number(invoice.mealsPerDay)} ${invoice.mealsPerDay === 1 ? 'comida' : 'comidas'} al día`
+              : '—'),
+            defRow('Comidas entregadas', number(invoice.meals)),
+            defRow('Total de la quincena', moneyFull(invoice.amount)),
+            defRow('Pagado', money(invoice.paid || 0)),
+            defRow('Fecha límite', formatDayLong(invoice.dueDate)),
+          ])),
+
+      isCharge(invoice)
+        ? alert('Es un cargo aparte de tu quincena. Si no lo reconoces, escríbenos y lo '
+          + 'revisamos.', 'info')
+        : null,
 
       (invoice.payments || []).length
         ? h('div.stack.stack-2',
-            h('div.section-label', { style: { padding: '4px 0' } }, 'Pagos de este periodo'),
+            h('div.section-label', { style: { padding: '4px 0' } },
+              isCharge(invoice) ? 'Pagos de este cargo' : 'Pagos de este periodo'),
             list((invoice.payments || []).map((payment) => itemRow({
               title: money(payment.amount),
               meta: [paymentMethodMeta(payment.method).label, payment.date ? formatDay(payment.date) : null]
