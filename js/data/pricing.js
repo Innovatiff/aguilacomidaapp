@@ -8,11 +8,9 @@
  */
 
 import { db, doc, onSnapshot, docData } from '../firebase.js';
-import { DEFAULT_TIERS, normalizeTiers } from '../lib/pricing.js';
+import { normalizePricing } from '../lib/pricing.js';
 
 export function watchPricing(onData, onError) {
-  return onSnapshot(doc(db, 'config', 'pricing'), (snap) => {
-    const data = docData(snap);
-    onData(data?.tiers?.length ? normalizeTiers(data.tiers) : [...DEFAULT_TIERS]);
-  }, onError);
+  return onSnapshot(doc(db, 'config', 'pricing'),
+    (snap) => onData(normalizePricing(docData(snap))), onError);
 }

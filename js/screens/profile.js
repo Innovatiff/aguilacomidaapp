@@ -10,14 +10,16 @@ import { icon } from '../lib/icons.js';
 import { screen } from '../ui/shell.js';
 import {
   card, button, badge, avatar, defList, defRow, sectionLabel, alert, field, input,
+  chargeRows,
 } from '../ui/kit.js';
 import { toastOk, toastBad, confirm, sheet } from '../ui/overlay.js';
 import { go } from '../lib/router.js';
 import { session, signOutNow, updateOwnProfile } from '../data/session.js';
 import { store, subscribe, fortnightPrice } from '../data/store.js';
 import { clientStatusMeta } from '../lib/model.js';
-import { formatDayLong, today, WEEKDAYS_SHORT, capitalize } from '../lib/dates.js';
-import { moneyFull, plural, phone as fmtPhone } from '../lib/format.js';
+import { formatDayLong, today, WEEKDAYS_SHORT } from '../lib/dates.js';
+import { fortnightCharge, mealsOn } from '../lib/pricing.js';
+import { moneyFull, phone as fmtPhone } from '../lib/format.js';
 import { PERIOD_DAYS } from '../lib/billing.js';
 import { dbMessage } from '../firebase.js';
 
@@ -84,22 +86,27 @@ export function renderProfile() {
   function termsCard() {
     const client = store.client;
     const price = fortnightPrice();
-    const order = [1, 2, 3, 4, 5, 6, 0];
-    const days = order
-      .filter((day) => (client.deliveryDays || []).includes(day))
-      .map((day) => capitalize(WEEKDAYS_SHORT[day]))
-      .join(', ');
 
     return h('div.stack.stack-3',
       sectionLabel('Condiciones acordadas'),
-      card(defList([
-        defRow('Mi plan', `${plural(client.mealsPerDay, 'comida', 'comidas')} al día`),
-        defRow('Días de servicio', days || '—'),
-        defRow('Horario', client.deliveryWindow || '—'),
-        defRow('Ciclo de cobro', `Cada ${PERIOD_DAYS} días`),
-        defRow('Inicio del ciclo', formatDayLong(client.cycleAnchor || today())),
-        defRow('Precio por quincena', price ? moneyFull(price) : 'Pregúntanos', { total: true }),
-      ])),
+      card(h('div.stack.stack-3',
+        h('div.stack.stack-2',
+          h('div.t-xs.upper.c-faint.w-700', 'Mi semana'),
+          h('div.weekstrip', [1, 2, 3, 4, 5, 6, 0].map((weekday) => {
+            const meals = mealsOn(client, weekday);
+            const extra = Number(client.extras?.[String(weekday)]) || 0;
+            return h(`div.weekstrip__day${meals ? '' : '.is-off'}${extra ? '.has-extra' : ''}`,
+              h('div.weekstrip__n', meals || '—'),
+              h('div.weekstrip__w', WEEKDAYS_SHORT[weekday]));
+          }))),
+
+        defList([
+          ...chargeRows(fortnightCharge(client, store.pricing), !!price),
+          defRow('Horario', client.deliveryWindow || '—'),
+          defRow('Ciclo de cobro', `Cada ${PERIOD_DAYS} días`),
+          defRow('Inicio del ciclo', formatDayLong(client.cycleAnchor || today())),
+          defRow('Precio por quincena', price ? moneyFull(price) : 'Pregúntanos', { total: true }),
+        ]))),
       h('p.t-xs.c-faint', client.farmName
         ? `Los días y el horario los acordó la cocina con ${client.farmName}. El precio es por `
           + 'quincena completa y puedes pagarlo antes, durante o después.'
