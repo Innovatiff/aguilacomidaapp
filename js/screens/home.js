@@ -18,7 +18,11 @@ import {
 } from '../data/store.js';
 import { latest } from '../data/receipts.js';
 import { mealsOn, extrasOf } from '../lib/pricing.js';
-import { greeting, formatDayLong, today, humanDelta, formatDay, formatRange, WEEKDAYS_SHORT } from '../lib/dates.js';
+import {
+  greeting, formatDayLong, today, humanDelta, formatDay, formatRange,
+  weekdayName, capitalize, WEEKDAYS_SHORT,
+} from '../lib/dates.js';
+import { payDayAfter } from '../lib/billing.js';
 import { money, plural } from '../lib/format.js';
 
 export function renderHome() {
@@ -113,6 +117,10 @@ function fortnightCard() {
               extras.map((entry) => `${WEEKDAYS_SHORT[entry.weekday]} +${entry.count}`).join(' · '))
           : null,
         defRow('Horario', client.deliveryWindow || '—'),
+        // The one date they need: not the bill's grace deadline, the day they
+        // turn up with the money.
+        defRow('Próximo pago',
+          `${capitalize(weekdayName(payDayAfter(period)))} ${formatDay(payDayAfter(period))}`),
       ].filter(Boolean)),
 
       alert('Puedes pagar esta quincena antes, durante o después. En la cocina te dan tu recibo '
