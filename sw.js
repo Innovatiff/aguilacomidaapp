@@ -12,7 +12,7 @@
  * Bump VERSION when the shell list changes; `activate` drops every older cache.
  */
 
-const VERSION = 'aguila-cliente-v2';
+const VERSION = 'aguila-cliente-v3';
 const SHELL = [
   './',
   './index.html',
@@ -22,6 +22,7 @@ const SHELL = [
   './css/components.css',
   './css/screens.css',
   './assets/icon.svg',
+  './assets/icon-180.png',
   './js/app.js',
 ];
 
