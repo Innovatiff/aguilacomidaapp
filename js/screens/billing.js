@@ -268,6 +268,21 @@ function openInvoice(invoice) {
             defRow('Fecha límite', formatDayLong(invoice.dueDate)),
           ])),
 
+      // Why the number is not what it was. Without this, a bill that quietly
+      // went from $140 to $70 is a bill the client cannot check — and one that
+      // went up is one they would be right to argue about.
+      (invoice.corrections || []).length
+        ? h('div.stack.stack-2',
+            h('div.section-label', { style: { padding: '4px 0' } }, 'Correcciones'),
+            list((invoice.corrections || []).map((entry) => itemRow({
+              title: `${money(entry.from)} → ${money(entry.to)}`,
+              meta: entry.note || '',
+              end: entry.date ? h('span.t-xs.c-faint', formatDay(entry.date)) : null,
+              chevron: false,
+            })), { card: true }),
+            h('p.t-xs.c-faint', 'La cocina corrigió este monto. Si algo no cuadra, escríbenos.'))
+        : null,
+
       isCharge(invoice)
         ? alert(`Es un cargo aparte de tu ${periodWord(store.client)}. Si no lo reconoces, `
           + 'escríbenos y lo revisamos.', 'info')
