@@ -12,7 +12,7 @@ import { watchInvoices } from './invoices.js';
 import { watchReceipts } from './receipts.js';
 import { watchConversation } from './chat.js';
 import { today } from '../lib/dates.js';
-import { summarize, periodFor, projectPeriod } from '../lib/billing.js';
+import { summarize, periodOf, projectPeriod } from '../lib/billing.js';
 import { watchPricing } from './pricing.js';
 import { DEFAULT_PRICING, chargeFor } from '../lib/pricing.js';
 
@@ -98,17 +98,16 @@ export function stopStore() {
 
 export const billing = () => (state.client ? summarize(state.client, state.invoices) : null);
 
-export const currentPeriod = () =>
-  (state.client ? periodFor(state.client.cycleAnchor || today(), today()) : null);
+export const currentPeriod = () => (state.client ? periodOf(state.client) : null);
 
-/** What the running fortnight costs, at the price of this person's plan. */
+/** What the running period costs, at the price of this person's plan. */
 export const periodEstimate = () => {
   const period = currentPeriod();
   return period && state.client ? projectPeriod(state.client, period, state.pricing) : null;
 };
 
-/** What one fortnight costs: the plan, adjusted for their week and extras. */
-export const fortnightPrice = () => chargeFor(state.client, state.pricing);
+/** What one period costs: the plan, adjusted for their week and extras. */
+export const periodPrice = () => chargeFor(state.client, state.pricing);
 
 export const unreadCount = () => Number(state.conversation?.unreadClient) || 0;
 

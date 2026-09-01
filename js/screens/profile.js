@@ -15,12 +15,12 @@ import {
 import { toastOk, toastBad, confirm, sheet } from '../ui/overlay.js';
 import { go } from '../lib/router.js';
 import { session, signOutNow, updateOwnProfile } from '../data/session.js';
-import { store, subscribe, fortnightPrice } from '../data/store.js';
+import { store, subscribe, periodPrice } from '../data/store.js';
 import { clientStatusMeta } from '../lib/model.js';
 import { formatDayLong, today, WEEKDAYS_SHORT } from '../lib/dates.js';
-import { fortnightCharge, mealsOn } from '../lib/pricing.js';
+import { periodCharge, mealsOn } from '../lib/pricing.js';
 import { moneyFull, phone as fmtPhone } from '../lib/format.js';
-import { PERIOD_DAYS } from '../lib/billing.js';
+import { periodWord, cadenceWord, payEveryOf } from '../lib/billing.js';
 import { dbMessage } from '../firebase.js';
 
 export function renderProfile() {
@@ -85,7 +85,7 @@ export function renderProfile() {
 
   function termsCard() {
     const client = store.client;
-    const price = fortnightPrice();
+    const price = periodPrice();
 
     return h('div.stack.stack-3',
       sectionLabel('Condiciones acordadas'),
@@ -101,16 +101,18 @@ export function renderProfile() {
           }))),
 
         defList([
-          ...chargeRows(fortnightCharge(client, store.pricing), !!price),
+          ...chargeRows(periodCharge(client, store.pricing), !!price),
           defRow('Horario', client.deliveryWindow || '—'),
-          defRow('Ciclo de cobro', `Cada ${PERIOD_DAYS} días`),
+          defRow('Ciclo de cobro', `Pago ${cadenceWord(client)} — ${payEveryOf(client)} días`),
           defRow('Inicio del ciclo', formatDayLong(client.cycleAnchor || today())),
-          defRow('Precio por quincena', price ? moneyFull(price) : 'Pregúntanos', { total: true }),
+          defRow(`Precio por ${periodWord(client)}`,
+            price ? moneyFull(price) : 'Pregúntanos', { total: true }),
         ]))),
       h('p.t-xs.c-faint', client.farmName
         ? `Los días y el horario los acordó la cocina con ${client.farmName}. El precio es por `
-          + 'quincena completa y puedes pagarlo antes, durante o después.'
-        : 'El precio es por quincena completa y puedes pagarlo antes, durante o después.'));
+          + `${periodWord(client)} completa y puedes pagarlo antes, durante o después.`
+        : `El precio es por ${periodWord(client)} completa y puedes pagarlo antes, durante o `
+          + 'después.'));
   }
 
   /**

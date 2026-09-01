@@ -14,7 +14,7 @@ import { card, button, alert, sectionLabel, skeletonRows, defList, defRow } from
 import { balanceHeadline } from '../ui/balance.js';
 import { go } from '../lib/router.js';
 import {
-  store, subscribe, billing, currentPeriod, fortnightPrice, isPaused, isReady,
+  store, subscribe, billing, currentPeriod, periodPrice, isPaused, isReady,
 } from '../data/store.js';
 import { latest } from '../data/receipts.js';
 import { mealsOn, extrasOf } from '../lib/pricing.js';
@@ -22,7 +22,7 @@ import {
   greeting, formatDayLong, today, humanDelta, formatDay, formatRange,
   weekdayName, capitalize, WEEKDAYS_SHORT,
 } from '../lib/dates.js';
-import { payDayAfter } from '../lib/billing.js';
+import { payDayAfter, periodWord } from '../lib/billing.js';
 import { money, plural } from '../lib/format.js';
 
 export function renderHome() {
@@ -41,7 +41,7 @@ function body() {
   return h('div.page__inner.page__inner--flow.stack.stack-4',
     isPaused() ? h('div.span-all', pausedNotice()) : null,
     paymentCard(),
-    fortnightCard(),
+    periodCard(),
     lastPaymentCard(),
     h('div.span-all.stack.stack-2',
       button('Escribir a la cocina', { variant: 'dark', block: true, icon: 'chat', onClick: () => go('/chat') }),
@@ -86,17 +86,17 @@ function paymentCard() {
 
 /* --- The running fortnight --------------------------------------------------- */
 
-function fortnightCard() {
+function periodCard() {
   const period = currentPeriod();
   const client = store.client;
   if (!period || !client) return null;
 
-  const price = fortnightPrice();
+  const price = periodPrice();
   const order = [1, 2, 3, 4, 5, 6, 0];
   const extras = extrasOf(client);
 
   return h('div.stack.stack-3',
-    sectionLabel('Mi quincena'),
+    sectionLabel(periodWord(client) === 'semana' ? 'Mi semana de pago' : 'Mi quincena'),
     card(h('div.stack.stack-3',
       h('div.row.row--between',
         h('span.t-sm.c-soft', formatRange(period.start, period.end)),
@@ -123,8 +123,8 @@ function fortnightCard() {
           `${capitalize(weekdayName(payDayAfter(period)))} ${formatDay(payDayAfter(period))}`),
       ].filter(Boolean)),
 
-      alert('Puedes pagar esta quincena antes, durante o después. En la cocina te dan tu recibo '
-        + 'al momento.', 'info'))));
+      alert(`Puedes pagar esta ${periodWord(client)} antes, durante o después. En la cocina te `
+        + 'dan tu recibo al momento.', 'info'))));
 }
 
 /* --- The last payment -------------------------------------------------------- */

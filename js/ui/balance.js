@@ -22,11 +22,14 @@ export function dueRing(summary) {
   const owes = summary.balance > 0;
   const days = summary.daysToDue;
   const late = days < 0;
+  // A weekly client's ring is a week wide. Drawing seven days against a
+  // fourteen-day dial would show them half full on the day they pay.
+  const span = Number(summary.currentPeriod?.every) || PERIOD_DAYS;
 
   return ring({
     // Overdue fills the ring; otherwise it drains as the deadline approaches.
-    value: !owes || late ? PERIOD_DAYS : Math.min(PERIOD_DAYS, Math.max(0, days)),
-    max: PERIOD_DAYS,
+    value: !owes || late ? span : Math.min(span, Math.max(0, days)),
+    max: span,
     top: owes ? String(Math.abs(days)) : '✓',
     bottom: !owes
       ? 'al día'

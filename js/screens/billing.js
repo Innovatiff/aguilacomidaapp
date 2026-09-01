@@ -16,12 +16,14 @@ import {
 } from '../ui/kit.js';
 import { balanceHeadline } from '../ui/balance.js';
 import { go } from '../lib/router.js';
-import { store, subscribe, billing, currentPeriod, periodEstimate, fortnightPrice } from '../data/store.js';
+import {
+  store, subscribe, billing, currentPeriod, periodEstimate, periodPrice,
+} from '../data/store.js';
 import { outstanding, balanceOf, invoiceStatus } from '../data/invoices.js';
 import { totalPaid, cancelledIds } from '../data/receipts.js';
 import { sheet } from '../ui/overlay.js';
 import {
-  STATUS_LABEL, STATUS_TONE, PERIOD_DAYS, isCharge, invoiceTitle, appliedTitle,
+  STATUS_LABEL, STATUS_TONE, isCharge, invoiceTitle, appliedTitle, periodWord,
 } from '../lib/billing.js';
 import { paymentMethodMeta } from '../lib/model.js';
 import { formatRange, formatDay, formatDayLong, formatStamp, humanDelta, today, daysBetween } from '../lib/dates.js';
@@ -97,29 +99,31 @@ function balanceCard(summary) {
     })));
 }
 
-/* --- The running fortnight ---------------------------------------------------- */
+/* --- The running period ------------------------------------------------------- */
 
 function runningPeriodCard() {
   const period = currentPeriod();
   const estimate = periodEstimate();
   if (!period || !estimate) return null;
 
-  const elapsed = Math.max(0, Math.min(PERIOD_DAYS, daysBetween(period.start, today()) + 1));
+  const span = period.every;
+  const elapsed = Math.max(0, Math.min(span, daysBetween(period.start, today()) + 1));
+  const word = periodWord(store.client);
 
   return h('div.stack.stack-3',
-    sectionLabel('Quincena en curso'),
+    sectionLabel(`${word === 'semana' ? 'Semana' : 'Quincena'} en curso`),
     card(h('div.stack.stack-3',
       h('div.row.row--between',
         h('span.t-sm.c-soft', formatRange(period.start, period.end)),
         h('span.w-700', money(estimate.amount, { round: true }))),
-      meter(percent(elapsed, PERIOD_DAYS)),
+      meter(percent(elapsed, span)),
       h('div.t-xs.c-faint',
         `${plural(store.client?.mealsPerDay || 0, 'comida', 'comidas')} al día · `
         + `${estimate.days} días de servicio · ${number(estimate.meals)} comidas`),
-      fortnightPrice()
-        ? alert('Es el precio de tu plan por quincena completa. Puedes pagarlo antes, durante o '
+      periodPrice()
+        ? alert(`Es el precio de tu plan por ${word} completa. Puedes pagarlo antes, durante o `
           + 'después — en la cocina te dan tu recibo al momento.', 'info')
-        : alert('Pregúntanos el precio de tu quincena.', 'info'))));
+        : alert(`Pregúntanos el precio de tu ${word}.`, 'info'))));
 }
 
 /* --- Rows --------------------------------------------------------------------- */
@@ -203,7 +207,7 @@ function openReceipt(receipt, wasCancelled = false) {
             h('div.section-label', { style: { padding: '4px 0' } }, 'Qué cubre'),
             list((receipt.applied || []).map((row) => itemRow({
               title: appliedTitle(row),
-              meta: row.kind === 'charge' ? 'Cargo' : 'Quincena',
+              meta: row.kind === 'charge' ? 'Cargo' : 'Periodo de comida',
               end: h('span.w-700', money(row.amount)),
               chevron: false,
             })), { card: true }))
@@ -259,14 +263,14 @@ function openInvoice(invoice) {
               ? `${number(invoice.mealsPerDay)} ${invoice.mealsPerDay === 1 ? 'comida' : 'comidas'} al día`
               : '—'),
             defRow('Comidas entregadas', number(invoice.meals)),
-            defRow('Total de la quincena', moneyFull(invoice.amount)),
+            defRow(`Total de la ${periodWord(invoice)}`, moneyFull(invoice.amount)),
             defRow('Pagado', money(invoice.paid || 0)),
             defRow('Fecha límite', formatDayLong(invoice.dueDate)),
           ])),
 
       isCharge(invoice)
-        ? alert('Es un cargo aparte de tu quincena. Si no lo reconoces, escríbenos y lo '
-          + 'revisamos.', 'info')
+        ? alert(`Es un cargo aparte de tu ${periodWord(store.client)}. Si no lo reconoces, `
+          + 'escríbenos y lo revisamos.', 'info')
         : null,
 
       (invoice.payments || []).length
