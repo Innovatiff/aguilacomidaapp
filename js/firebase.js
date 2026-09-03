@@ -102,5 +102,11 @@ export function dbMessage(error) {
   if (code === 'permission-denied') return 'No tienes permiso para hacer esto.';
   if (code === 'unavailable') return 'Sin conexión. Los cambios se guardarán al reconectar.';
   if (code === 'not-found') return 'El registro ya no existe.';
+  // The kitchen's database hit its daily limit. Nothing the client did is
+  // wrong, and telling them to try again is telling them to fail again.
+  if (code === 'resource-exhausted') {
+    return 'El sistema de la cocina no está disponible en este momento. '
+      + 'Inténtalo más tarde o escríbenos.';
+  }
   return 'No se pudo guardar. Inténtalo de nuevo.';
 }
