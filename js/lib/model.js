@@ -18,8 +18,16 @@ export const clientStatusMeta = (status) => CLIENT_STATUS[status] || CLIENT_STAT
 
 /* --- Payments ------------------------------------------------------------- */
 
+/*
+ * How money arrives. `debit` is the Interac card everybody at this counter
+ * carries and is a different thing from `card`, which is credit. The kitchen
+ * records which one it was, and this app has to be able to read it back: a
+ * receipt that says "Otro" when the client tapped their debit card is this app
+ * failing to describe the thing they are holding.
+ */
 export const PAYMENT_METHODS = {
   cash:     { label: 'Efectivo',       icon: 'cash' },
+  debit:    { label: 'Débito',         icon: 'card' },
   transfer: { label: 'Transferencia',  icon: 'card' },
   cheque:   { label: 'Cheque',         icon: 'note' },
   card:     { label: 'Tarjeta',        icon: 'card' },
