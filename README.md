@@ -64,6 +64,26 @@ cuanto lo registren, esa pantalla se convierte en su app sola.
 Para mover o quitar el acceso, la cocina cambia el correo en la ficha de esa
 persona. El anterior deja de funcionar al instante.
 
+### El QR de la etiqueta
+
+Cada recipiente que sale de la cocina lleva pegada una etiqueta con un código
+QR. Escanearlo con la cámara del teléfono abre **`/#/instalar`**, que es la
+única pantalla de esta app que funciona sin haber entrado:
+
+- Muestra **su propio correo**, el que la cocina registró, grande y con un
+  botón para copiarlo.
+- Explica cómo instalar la app, con los pasos del teléfono que tenga en la
+  mano — iPhone, Android o computadora.
+- En Android ofrece un botón que instala de verdad, sin pasos, cuando Chrome
+  avisa que se puede.
+
+El correo viaja en el **fragmento** de la dirección (lo que va después del `#`),
+que es la parte que los navegadores nunca mandan al servidor. Ni Netlify ni
+nadie en medio termina con una lista de quién recibió cuál recipiente.
+
+Esa pantalla se decide antes de que arranque la sesión y no lee nada de
+Firestore: quien escanea el código puede no tener cuenta todavía.
+
 ---
 
 ## Puesta en marcha
@@ -127,7 +147,7 @@ js/
     chat.js           hilo con la cocina
     store.js          escuchas en vivo de esa persona
   ui/                 shell, kit de componentes, hojas, chat, saldo
-  screens/            login, unregistered, home, billing, chat, profile
+  screens/            login, unregistered, install, home, billing, chat, profile
 ```
 
 `css/`, `js/lib/`, `js/ui/` y `js/firebase.js` son idénticos a los del panel de

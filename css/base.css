@@ -222,6 +222,9 @@ img, svg { display: block; max-width: 100%; }
 .t-3xl{ font-size: var(--fs-3xl); letter-spacing: -.025em; }
 
 .w-500 { font-weight: 500; } .w-600 { font-weight: 600; } .w-700 { font-weight: 700; }
+/* Used by the sign-in and install screens; it was missing, so those headings
+   were coming out at normal weight. */
+.w-650 { font-weight: 650; }
 .c-soft  { color: var(--text-soft); }
 .c-faint { color: var(--text-faint); }
 .c-brand { color: var(--brand-600); }

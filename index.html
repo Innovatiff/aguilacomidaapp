@@ -37,6 +37,18 @@
     </p>
   </noscript>
 
+  <script>
+    // Chrome avisa una sola vez que la app se puede instalar, y lo hace antes
+    // de que termine de cargar cualquier módulo. Aquí se guarda el aviso para
+    // que la pantalla de instalar pueda ofrecer el botón de verdad en lugar de
+    // una lista de pasos.
+    window.__installPrompt = null;
+    window.addEventListener('beforeinstallprompt', function (event) {
+      event.preventDefault();
+      window.__installPrompt = event;
+    });
+  </script>
+
   <script type="module" src="./js/app.js"></script>
   <script>
     // Progressive enhancement only: the app works without it.

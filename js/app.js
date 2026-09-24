@@ -21,6 +21,7 @@ import { renderBilling } from './screens/billing.js';
 import { renderChat } from './screens/chat.js';
 import { renderProfile } from './screens/profile.js';
 import { button, emptyState } from './ui/kit.js';
+import { renderInstall, installWanted, emailFromHash } from './screens/install.js';
 
 const TABS = [
   { id: 'home',       path: '/',           label: 'Inicio',   icon: 'home' },
@@ -35,16 +36,38 @@ let linkedTo = null;       // the farm id the store is running for
 let routerStarted = false;
 let stopBadge = null;
 
-splash(host);
-startSession();
+/*
+ * The sticker's page comes first, before anything else starts.
+ *
+ * Somebody scanning a QR off a container has no session and may have no
+ * account, so this screen cannot sit behind the sign-in the way every other
+ * screen does. It is decided from the address alone and reads nothing: no
+ * Firestore, no session, no splash.
+ *
+ * Pressing "Entrar a mi cuenta" reloads onto the app proper rather than
+ * switching in place. It is a page somebody opens once, from a camera, and a
+ * reload is the one way of leaving it that cannot land half-booted.
+ */
+if (installWanted()) {
+  renderInstall(host, {
+    email: emailFromHash(),
+    onEnter: () => { location.hash = '/'; location.reload(); },
+  });
+} else {
+  splash(host);
+  startSession();
+  boot();
+}
 
-watchSession(() => {
-  if (!session.ready) return;
+function boot() {
+  watchSession(() => {
+    if (!session.ready) return;
 
-  if (!session.user) return enter('auth');
-  if (!session.clientId) return enter('unregistered');
-  return enter('app', session.clientId);
-});
+    if (!session.user) return enter('auth');
+    if (!session.clientId) return enter('unregistered');
+    return enter('app', session.clientId);
+  });
+}
 
 function enter(next, clientId = null) {
   // The app phase restarts when the account is linked to a different farm.
@@ -90,6 +113,10 @@ function enter(next, clientId = null) {
 
 function registerRoutes() {
   register('/', renderHome);
+  // Reachable from inside the app too, though nobody gets here that way: the
+  // boot branch above is what actually draws it, so this just puts the address
+  // back through it.
+  register('/instalar', () => { location.reload(); });
   register('/billing', renderBilling);
   register('/chat', renderChat);
   register('/profile', renderProfile);

@@ -734,3 +734,49 @@
   .auth__hero { padding: var(--s7) var(--s6) var(--s6); border-radius: 0; }
   .auth__body { padding: var(--s6); flex: none; }
 }
+
+/* --- Instalar: la página a la que lleva el QR de una etiqueta ---------------
+   La abre alguien parado en un campo, con la comida en la mano, que nunca ha
+   visto esta app. Un correo que se lee de lejos y tres pasos numerados. */
+
+.inst__me { display: flex; flex-direction: column; gap: var(--s2); }
+.inst__mail {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  line-height: 1.25;
+  /* Un correo se teclea carácter por carácter: se parte donde sea antes que
+     salirse de la tarjeta, y nunca se recorta con puntos suspensivos. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.inst__how { opacity: .72; }
+.inst__how.is-open { opacity: 1; }
+
+.inst__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.inst__step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s3);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--text-soft);
+}
+.inst__n {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px; height: 22px;
+  border-radius: var(--r-full);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
