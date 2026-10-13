@@ -14,7 +14,7 @@ import { card, button, alert, sectionLabel, skeletonRows, defList, defRow } from
 import { balanceHeadline } from '../ui/balance.js';
 import { go } from '../lib/router.js';
 import {
-  store, subscribe, billing, currentPeriod, periodPrice, isPaused, isReady,
+  store, subscribe, billing, currentPeriod, periodPrice, isPaused, isReady, paidUpTo,
 } from '../data/store.js';
 import { latest } from '../data/receipts.js';
 import { mealsOn, extrasOf } from '../lib/pricing.js';
@@ -72,8 +72,8 @@ function paymentCard() {
               ? `Venció ${humanDelta(days)} — ${formatDay(summary.dueDate)}.`
               : `Vence ${humanDelta(days)} — ${formatDay(summary.dueDate)}.`,
             summary.status === 'overdue' ? 'bad' : days <= 2 ? 'warn' : 'info')
-        : alert(store.client?.paidThrough && store.client.paidThrough >= today()
-          ? `Estás al corriente. Tienes pagado hasta el ${formatDay(store.client.paidThrough)}.`
+        : alert(paidUpTo()
+          ? `Estás al corriente: pagaste hasta el ${formatDay(paidUpTo())}. Gracias.`
           : 'Estás al corriente con la cocina. Gracias.', 'ok'),
 
       h('div.btn-group',
@@ -123,8 +123,12 @@ function periodCard() {
           `${capitalize(weekdayName(payDayAfter(period)))} ${formatDay(payDayAfter(period))}`),
       ].filter(Boolean)),
 
-      alert(`Puedes pagar esta ${periodWord(client)} antes, durante o después. En la cocina te `
-        + 'dan tu recibo al momento.', 'info'))));
+      // Paid for once eaten, never before — the way the kitchen has always
+      // worked, said in the one place a client looks for it.
+      alert(`Esta ${periodWord(client)} se paga cuando termina, el `
+        + `${weekdayName(payDayAfter(period))} ${formatDay(payDayAfter(period))}: siempre pagas `
+        + 'lo que ya comiste, nunca por adelantado. En la cocina te dan tu recibo al momento.',
+      'info'))));
 }
 
 /* --- The last payment -------------------------------------------------------- */

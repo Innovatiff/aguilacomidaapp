@@ -31,11 +31,18 @@ existe para no tener que llamar por teléfono para saber.
 
 Se paga en efectivo, en la cocina, y uno se va con las manos vacías. Por eso el
 recibo está aquí: en cuanto la cocina cobra, aparece en **Pagos** con su folio
-(`R-260821-WPUF`), cuánto fue, qué quincenas cubrió y con cuánto quedó la cuenta.
+(`R-260821-WPUF`), cuánto fue, **a qué quincena fue** y con cuánto quedó la
+cuenta.
 
-La quincena se puede pagar **antes, durante o después**. El precio es plano — lo
-que cuesta el plan de cada quien — así que se puede pagar una quincena que ni
-siquiera ha empezado, y el recibo lo dice.
+**Se paga lo que ya se comió, nunca por adelantado.** Quien empieza el 7 de
+octubre paga el 21, por el 7 al 20. La app lo dice así: la quincena en curso
+*«se paga cuando termina»*, con su día; «pagaste hasta» es siempre un día ya
+servido; y **Por pagar** no muestra la quincena que todavía se está sirviendo.
+
+A qué quincena fue un pago se lee de las facturas, no del recibo (`paidFor` en
+`js/lib/billing.js`): si la cocina movió a su quincena un pago que el sistema de
+antes había puesto en la que empezaba, el recibo sigue diciendo lo que dijo y la
+app muestra a dónde va ahora.
 
 Un recibo no se edita ni se borra. Si la cocina cancela un cobro hecho por error,
 aparece un **segundo recibo en negativo**: los dos quedan a la vista, que es la
@@ -165,9 +172,13 @@ documento y ya sabe dónde le dejan la comida y bajo qué condiciones; no tiene
 que consultar el rancho para mostrar «Casa 1».
 
 **La quincena se cobra plana, no por comida.** Lo que se paga es el plan — una o
-dos comidas al día — así que el monto se conoce el día que abre el periodo. Cada
-factura guarda el precio con el que se emitió: si la cocina sube el precio, lo ya
-cobrado no cambia.
+dos comidas al día — así que el monto se conoce el día que abre el periodo, y se
+paga el día que termina. Cada factura guarda el precio con el que se emitió: si
+la cocina sube el precio, lo ya cobrado no cambia.
+
+**`js/lib/billing.js` es el mismo archivo en las dos apps.** Copiado byte por
+byte del panel: la regla de qué se puede cobrar y cuándo no puede decir una cosa
+en la caja y otra en el teléfono del cliente.
 
 **El estado de la factura se calcula al leer.** «Vencido» depende de la fecha de
 hoy; guardarlo en el documento lo dejaría desactualizado al día siguiente.

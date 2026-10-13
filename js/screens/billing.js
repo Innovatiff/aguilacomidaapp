@@ -17,16 +17,18 @@ import {
 import { balanceHeadline } from '../ui/balance.js';
 import { go } from '../lib/router.js';
 import {
-  store, subscribe, billing, currentPeriod, periodEstimate, periodPrice,
+  store, subscribe, billing, currentPeriod, periodEstimate, periodPrice, paidUpTo,
 } from '../data/store.js';
 import { outstanding, balanceOf, invoiceStatus } from '../data/invoices.js';
 import { totalPaid, cancelledIds } from '../data/receipts.js';
 import { sheet } from '../ui/overlay.js';
 import {
-  STATUS_LABEL, STATUS_TONE, isCharge, invoiceTitle, appliedTitle, periodWord,
+  STATUS_LABEL, STATUS_TONE, isCharge, invoiceTitle, appliedTitle, periodWord, payDayAfter, paidFor,
 } from '../lib/billing.js';
 import { paymentMethodMeta } from '../lib/model.js';
-import { formatRange, formatDay, formatDayLong, formatStamp, humanDelta, today, daysBetween } from '../lib/dates.js';
+import {
+  formatRange, formatDay, formatDayLong, formatStamp, humanDelta, today, daysBetween, weekdayName,
+} from '../lib/dates.js';
 import { money, moneyFull, number, percent, plural } from '../lib/format.js';
 import { toDate } from '../firebase.js';
 
@@ -44,7 +46,7 @@ export function renderBilling() {
 
 function body() {
   const summary = billing();
-  const due = outstanding(store.invoices);
+  const due = outstanding(store.invoices, today(), store.client);
   const receipts = store.receipts || [];
 
   return h('div.page__inner.page__inner--flow.stack.stack-4',
@@ -69,12 +71,6 @@ function body() {
 
 /* --- Balance ----------------------------------------------------------------- */
 
-/** How far the kitchen has this person paid up, when it is worth saying. */
-function paidUpTo() {
-  const through = store.client?.paidThrough;
-  return through && through >= today() ? through : null;
-}
-
 function balanceCard(summary) {
   if (!summary) return null;
   const owes = summary.balance > 0;
@@ -90,7 +86,7 @@ function balanceCard(summary) {
             : `Vence ${humanDelta(days)} — ${formatDayLong(summary.dueDate)}.`,
           summary.status === 'overdue' ? 'bad' : days <= 2 ? 'warn' : 'info')
       : alert(paidUpTo()
-        ? `Estás al corriente. Tienes pagado hasta el ${formatDay(paidUpTo())}.`
+        ? `Estás al corriente: pagaste hasta el ${formatDay(paidUpTo())}. Gracias.`
         : 'Estás al corriente con la cocina. Gracias.', 'ok'),
 
     button('Pedir los datos de pago', {
@@ -121,8 +117,9 @@ function runningPeriodCard() {
         `${plural(store.client?.mealsPerDay || 0, 'comida', 'comidas')} al día · `
         + `${estimate.days} días de servicio · ${number(estimate.meals)} comidas`),
       periodPrice()
-        ? alert(`Es el precio de tu plan por ${word} completa. Puedes pagarlo antes, durante o `
-          + 'después — en la cocina te dan tu recibo al momento.', 'info')
+        ? alert(`Es el precio de tu plan por ${word} completa. La pagas cuando termina, el `
+          + `${weekdayName(payDayAfter(period))} ${formatDay(payDayAfter(period))}: siempre lo que `
+          + 'ya comiste, nunca por adelantado. En la cocina te dan tu recibo al momento.', 'info')
         : alert(`Pregúntanos el precio de tu ${word}.`, 'info'))));
 }
 
@@ -171,8 +168,10 @@ function receiptRow(receipt, wasCancelled = false) {
 /**
  * The receipt itself.
  *
- * Shown as it would be on paper — amount, folio, what it covered — because
- * that is what somebody opens when they are asked "did you pay?".
+ * Amount, folio, and which fortnight it paid for — because that is what
+ * somebody opens when they are asked "did you pay?". Which fortnight is read
+ * off their bills (`paidFor`): a payment the kitchen moved to the fortnight it
+ * was really for shows there, not where it first landed.
  */
 function openReceipt(receipt, wasCancelled = false) {
   const reversal = Number(receipt.amount) < 0;
@@ -202,10 +201,10 @@ function openReceipt(receipt, wasCancelled = false) {
         receipt.at ? defRow('Registrado', formatStamp(toDate(receipt.at))) : null,
       ].filter(Boolean))),
 
-      (receipt.applied || []).length
+      paidFor(receipt, store.invoices).length
         ? h('div.stack.stack-2',
-            h('div.section-label', { style: { padding: '4px 0' } }, 'Qué cubre'),
-            list((receipt.applied || []).map((row) => itemRow({
+            h('div.section-label', { style: { padding: '4px 0' } }, 'Es por'),
+            list(paidFor(receipt, store.invoices).map((row) => itemRow({
               title: appliedTitle(row),
               meta: row.kind === 'charge' ? 'Cargo' : 'Periodo de comida',
               end: h('span.w-700', money(row.amount)),

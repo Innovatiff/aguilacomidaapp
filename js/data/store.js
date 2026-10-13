@@ -12,7 +12,7 @@ import { watchInvoices } from './invoices.js';
 import { watchReceipts } from './receipts.js';
 import { watchConversation } from './chat.js';
 import { today } from '../lib/dates.js';
-import { summarize, periodOf, projectPeriod } from '../lib/billing.js';
+import { summarize, periodOf, projectPeriod, paidThroughOn } from '../lib/billing.js';
 import { watchPricing } from './pricing.js';
 import { DEFAULT_PRICING, chargeFor } from '../lib/pricing.js';
 
@@ -99,6 +99,21 @@ export function stopStore() {
 export const billing = () => (state.client ? summarize(state.client, state.invoices) : null);
 
 export const currentPeriod = () => (state.client ? periodOf(state.client) : null);
+
+/**
+ * The last day of food they have paid for — always a day already eaten.
+ *
+ * Nobody pays ahead here: every payment is for the fortnight that has just
+ * been served. A date still to come is something the kitchen is putting right
+ * (a payment that landed on a fortnight before it was served), so it is not
+ * repeated back to the client as if it were true.
+ */
+export const paidUpTo = () => {
+  const client = state.client;
+  if (!client?.paidThrough) return null;
+  const through = paidThroughOn(client, client.paidThrough);
+  return through < periodOf(client).start ? through : null;
+};
 
 /** What the running period costs, at the price of this person's plan. */
 export const periodEstimate = () => {

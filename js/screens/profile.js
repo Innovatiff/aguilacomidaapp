@@ -110,9 +110,10 @@ export function renderProfile() {
         ]))),
       h('p.t-xs.c-faint', client.farmName
         ? `Los días y el horario los acordó la cocina con ${client.farmName}. El precio es por `
-          + `${periodWord(client)} completa y puedes pagarlo antes, durante o después.`
-        : `El precio es por ${periodWord(client)} completa y puedes pagarlo antes, durante o `
-          + 'después.'));
+          + `${periodWord(client)} completa y se paga cuando termina: siempre lo que ya comiste, `
+          + 'nunca por adelantado.'
+        : `El precio es por ${periodWord(client)} completa y se paga cuando termina: siempre lo `
+          + 'que ya comiste, nunca por adelantado.'));
   }
 
   /**

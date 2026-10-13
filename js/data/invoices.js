@@ -6,7 +6,7 @@
 import {
   db, collection, onSnapshot, query, where, orderBy, limit as qLimit, listData,
 } from '../firebase.js';
-import { balanceOf, invoiceStatus } from '../lib/billing.js';
+import { balanceOf, invoiceStatus, isCharge, isPayable } from '../lib/billing.js';
 import { today } from '../lib/dates.js';
 
 export function watchInvoices(clientId, onData, onError, count = 24) {
@@ -20,9 +20,16 @@ export function watchInvoices(clientId, onData, onError, count = 24) {
   );
 }
 
-/** Everything still owed, soonest deadline first. */
-export const outstanding = (invoices, day = today()) => invoices
+/**
+ * Everything still owed, soonest deadline first.
+ *
+ * Only for food already eaten: a bill for the fortnight still running is paid
+ * the day it ends, not before.
+ */
+export const outstanding = (invoices, day = today(), client = null) => invoices
   .filter((invoice) => balanceOf(invoice) > 0.005)
+  .filter((invoice) => isCharge(invoice)
+    || isPayable({ start: invoice.periodStart, end: invoice.periodEnd }, client, day))
   .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
   .map((invoice) => ({ ...invoice, uiStatus: invoiceStatus(invoice, day) }));
 
