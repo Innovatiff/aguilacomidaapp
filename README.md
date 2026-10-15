@@ -44,6 +44,11 @@ A qué quincena fue un pago se lee de las facturas, no del recibo (`paidFor` en
 antes había puesto en la que empezaba, el recibo sigue diciendo lo que dijo y la
 app muestra a dónde va ahora.
 
+La cocina nunca rechaza un pago. Si alguien paga cuando todavía no debía nada,
+o más de lo que debía, lo que sobra **queda a cuenta** de la quincena en curso,
+y en su recibo esa línea dice *«a cuenta»*; si no había quincena donde ponerlo,
+sale como *«Quedó a cuenta»*, sin quincena.
+
 Un recibo no se edita ni se borra. Si la cocina cancela un cobro hecho por error,
 aparece un **segundo recibo en negativo**: los dos quedan a la vista, que es la
 única forma de que la cuenta se pueda verificar después.

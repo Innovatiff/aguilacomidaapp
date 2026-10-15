@@ -206,7 +206,11 @@ function openReceipt(receipt, wasCancelled = false) {
             h('div.section-label', { style: { padding: '4px 0' } }, 'Es por'),
             list(paidFor(receipt, store.invoices).map((row) => itemRow({
               title: appliedTitle(row),
-              meta: row.kind === 'charge' ? 'Cargo' : 'Periodo de comida',
+              meta: row.kind === 'charge'
+                ? 'Cargo'
+                : row.kind === 'credit'
+                  ? 'Quedó a cuenta'
+                  : row.early ? 'Periodo de comida · a cuenta' : 'Periodo de comida',
               end: h('span.w-700', money(row.amount)),
               chevron: false,
             })), { card: true }))
