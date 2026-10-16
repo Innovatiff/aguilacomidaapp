@@ -55,6 +55,12 @@ const pausedNotice = () => alert(
 /* --- Money ------------------------------------------------------------------ */
 
 function paymentCard() {
+  // Bills that could not be read are not a balance of nothing.
+  if (store.invoicesFailed) {
+    return h('div.stack.stack-3',
+      sectionLabel('Tu cuenta'),
+      alert('No pudimos leer tus pagos ahora. Revisa tu internet y vuelve a abrir la app.', 'warn'));
+  }
   const summary = billing();
   if (!summary) return null;
 

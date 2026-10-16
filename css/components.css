@@ -74,8 +74,10 @@
 .btn--lg { min-height: 52px; font-size: var(--fs-md); }
 .btn--icon { min-height: 40px; width: 40px; padding: 0; border-radius: var(--r-full); }
 
-.btn-group { display: flex; gap: var(--s2); }
-.btn-group > .btn { flex: 1; }
+/* Side by side while they fit; on a 320px phone the second goes underneath
+   rather than both being squeezed past their labels. */
+.btn-group { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.btn-group > .btn { flex: 1 1 auto; }
 
 /* Floating action button */
 .fab {

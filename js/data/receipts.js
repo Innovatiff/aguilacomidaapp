@@ -50,9 +50,18 @@ export const cancelledIds = (receipts) =>
 export const wasCancelled = (receipt, receipts) =>
   !!receipt && cancelledIds(receipts).has(receipt.id);
 
-/** The most recent payment that still stands — the one worth showing on Inicio. */
+/**
+ * The most recent payment that still stands — the one worth showing on Inicio.
+ *
+ * By the day it was paid, then by when it was written down: a payment from the
+ * notebook typed in today is older than last week's, whatever order they were
+ * entered in.
+ */
 export function latest(receipts) {
   const voided = cancelledIds(receipts);
-  return (receipts || []).find(
-    (row) => Number(row.amount) > 0 && !voided.has(row.id)) || null;
+  const stamp = (row) => (row.at?.toMillis ? row.at.toMillis() : 0);
+  return [...(receipts || [])]
+    .filter((row) => Number(row.amount) > 0 && !voided.has(row.id))
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || stamp(b) - stamp(a))[0]
+    || null;
 }

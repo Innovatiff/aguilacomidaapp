@@ -21,6 +21,23 @@ export function watchInvoices(clientId, onData, onError, count = 24) {
 }
 
 /**
+ * Every bill not yet paid, however old.
+ *
+ * The list above is the latest two dozen, which is the history worth showing.
+ * What is owed cannot stop there: a debt older than that would quietly drop
+ * out of the balance, and the app would say less than the kitchen does.
+ */
+export function watchUnsettled(clientId, onData, onError) {
+  return onSnapshot(
+    query(collection(db, 'invoices'),
+      where('clientId', '==', clientId),
+      where('settled', '==', false)),
+    (snap) => onData(listData(snap)),
+    onError,
+  );
+}
+
+/**
  * Everything still owed, soonest deadline first.
  *
  * Only for food already eaten: a bill for the fortnight still running is paid

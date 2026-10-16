@@ -23,6 +23,7 @@ const state = { user: null, link: null, profile: null, ready: false };
 const listeners = new Set();
 let stopLink = null;
 let stopProfile = null;
+let undecided = null;      // waiting on the server to say whether there is a link
 
 export const session = {
   get user() { return state.user; },
@@ -55,6 +56,8 @@ export function startSession() {
     stopProfile?.();
     stopLink = null;
     stopProfile = null;
+    clearTimeout(undecided);
+    undecided = null;
 
     state.user = user;
     state.link = null;
@@ -75,8 +78,27 @@ export function startSession() {
 
     stopLink = onSnapshot(
       doc(db, 'clientEmails', email),
+      // Told when the server confirms what the phone's own copy said, too.
+      { includeMetadataChanges: true },
       (snap) => {
-        state.link = docData(snap);
+        // The phone's copy saying "nothing here" is not an answer — it may
+        // never have read it — and taking it for one sent people with no
+        // signal to "Falta registrarte". The server is waited for, a while.
+        if (!snap.exists() && snap.metadata?.fromCache) {
+          if (!state.ready && !undecided) {
+            undecided = setTimeout(() => {
+              undecided = null;
+              if (!state.ready && state.user === user) { state.ready = true; emit(); }
+            }, 8000);
+          }
+          return;
+        }
+        clearTimeout(undecided);
+        undecided = null;
+        const link = docData(snap);
+        // A confirmation that changed nothing is not news.
+        if (state.ready && JSON.stringify(link) === JSON.stringify(state.link)) return;
+        state.link = link;
         state.ready = true;
         emit();
       },
@@ -112,14 +134,21 @@ export async function signIn(email, password) {
 export async function signUp({ email, password, name, phone = '' }) {
   const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
   const user = credential.user;
-  if (name) await updateProfile(user, { displayName: name });
 
-  await setDoc(doc(db, 'users', user.uid), {
-    name: name || '',
-    email: user.email || '',
-    phone,
-    createdAt: serverTimestamp(),
-  });
+  // The account exists from here, and the app is already opening on it. Its
+  // name and phone are a courtesy: one that fails — or waits on the internet —
+  // must not come back as "the sign-up failed" and paint the form over the app.
+  try {
+    if (name) await updateProfile(user, { displayName: name });
+    const write = setDoc(doc(db, 'users', user.uid), {
+      name: name || '',
+      email: user.email || '',
+      phone,
+      createdAt: serverTimestamp(),
+    });
+    write.catch(() => {});
+    await Promise.race([write, new Promise((resolve) => { setTimeout(resolve, 4000); })]);
+  } catch { /* set again from Perfil */ }
   return user;
 }
 

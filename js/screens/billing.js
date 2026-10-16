@@ -24,6 +24,7 @@ import { totalPaid, cancelledIds } from '../data/receipts.js';
 import { sheet } from '../ui/overlay.js';
 import {
   STATUS_LABEL, STATUS_TONE, isCharge, invoiceTitle, appliedTitle, periodWord, payDayAfter, paidFor,
+  paymentsOf,
 } from '../lib/billing.js';
 import { paymentMethodMeta } from '../lib/model.js';
 import {
@@ -50,7 +51,9 @@ function body() {
   const receipts = store.receipts || [];
 
   return h('div.page__inner.page__inner--flow.stack.stack-4',
-    balanceCard(summary),
+    store.invoicesFailed
+      ? alert('No pudimos leer tus pagos ahora. Revisa tu internet y vuelve a abrir la app.', 'warn')
+      : balanceCard(summary),
     runningPeriodCard(),
 
     due.length ? sectionLabel('Por pagar') : null,
@@ -210,7 +213,7 @@ function openReceipt(receipt, wasCancelled = false) {
                 ? 'Cargo'
                 : row.kind === 'credit'
                   ? 'Quedó a cuenta'
-                  : row.early ? 'Periodo de comida · a cuenta' : 'Periodo de comida',
+                  : row.early || row.ahead ? 'Periodo de comida · a cuenta' : 'Periodo de comida',
               end: h('span.w-700', money(row.amount)),
               chevron: false,
             })), { card: true }))
@@ -295,11 +298,11 @@ function openInvoice(invoice) {
           + 'escríbenos y lo revisamos.', 'info')
         : null,
 
-      (invoice.payments || []).length
+      paymentsOf(invoice).length
         ? h('div.stack.stack-2',
             h('div.section-label', { style: { padding: '4px 0' } },
               isCharge(invoice) ? 'Pagos de este cargo' : 'Pagos de este periodo'),
-            list((invoice.payments || []).map((payment) => itemRow({
+            list(paymentsOf(invoice).map((payment) => itemRow({
               title: money(payment.amount),
               meta: [paymentMethodMeta(payment.method).label, payment.date ? formatDay(payment.date) : null]
                 .filter(Boolean).join(' · '),

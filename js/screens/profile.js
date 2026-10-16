@@ -43,9 +43,10 @@ export function renderProfile() {
     return card(h('div.stack.stack-3',
       h('div.row',
         avatar(session.displayName, { size: 'lg' }),
-        h('div.grow',
-          h('div.t-lg.w-700', session.displayName || 'Sin nombre'),
-          h('div.t-sm.c-soft', session.user?.email || ''),
+        h('div.grow', { style: { minWidth: 0 } },
+          h('div.t-lg.w-700', { style: { overflowWrap: 'anywhere' } }, session.displayName || 'Sin nombre'),
+          // A long address breaks where it must instead of pushing the card wide.
+          h('div.t-sm.c-soft', { style: { overflowWrap: 'anywhere' } }, session.user?.email || ''),
           session.profile?.phone
             ? h('div.t-sm.c-soft', fmtPhone(session.profile.phone))
             : null)),

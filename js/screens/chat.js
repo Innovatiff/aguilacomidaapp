@@ -20,6 +20,7 @@ export function renderChat(context) {
   const clientId = store.clientId || session.clientId;
   let view = null;
   let ensured = false;
+  let sub = null;            // the balance under the title, once it is drawn
 
   function draw() {
     if (!clientId) {
@@ -52,6 +53,17 @@ export function renderChat(context) {
 
     const summary = billing();
     const owes = (summary?.balance || 0) > 0;
+    const text = owes ? `Saldo ${money(summary.balance, { round: true })}` : 'Al corriente';
+
+    // Drawn once. A reply from the kitchen, a payment — anything new — would
+    // otherwise rebuild the page around the box somebody is typing in, and on
+    // a phone that closes the keyboard mid-word. After the first time only the
+    // balance under the title follows the data.
+    if (sub?.isConnected) {
+      sub.textContent = text;
+      return;
+    }
+    sub = h('span.topbar__sub', text);
 
     const page = screen({
       title: 'El Águila Cocina',
@@ -61,7 +73,7 @@ export function renderChat(context) {
         avatar('El Águila', { size: 'sm', dark: true }),
         h('div.grow', { style: { minWidth: 0 } },
           h('div.topbar__title', { style: { fontSize: 'var(--fs-md)' } }, 'El Águila Cocina'),
-          h('span.topbar__sub', owes ? `Saldo ${money(summary.balance, { round: true })}` : 'Al corriente'))),
+          sub)),
       body: h('div.stack', { style: { flex: '1', minHeight: '0', display: 'flex' } }, view.node),
     });
 
