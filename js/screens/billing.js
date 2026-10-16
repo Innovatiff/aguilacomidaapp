@@ -219,12 +219,16 @@ function openReceipt(receipt, wasCancelled = false) {
       // Only true while the payment still stands. Saying "quedaste al
       // corriente" under a cancelled receipt would be the most misleading line
       // on the screen.
+      // A payment the kitchen kept whole, to be put on your fortnights after:
+      // the money is in, and the balance is not something it can say yet.
       dead
         ? null
-        : alert((receipt.balanceAfter || 0) > 0.005
-          ? `Después de este pago quedaban ${money(receipt.balanceAfter)} pendientes.`
-          : 'Con este pago quedaste al corriente.',
-        (receipt.balanceAfter || 0) > 0.005 ? 'warn' : 'ok'),
+        : receipt.held
+          ? alert('Recibimos este pago. La cocina lo aplica a tus quincenas.', 'ok')
+          : alert((receipt.balanceAfter || 0) > 0.005
+            ? `Después de este pago quedaban ${money(receipt.balanceAfter)} pendientes.`
+            : 'Con este pago quedaste al corriente.',
+          (receipt.balanceAfter || 0) > 0.005 ? 'warn' : 'ok'),
 
       button('Preguntar sobre este recibo', {
         variant: 'ghost', block: true, icon: 'chat',
