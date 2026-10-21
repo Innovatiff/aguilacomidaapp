@@ -22,6 +22,7 @@ import { periodCharge, mealsOn } from '../lib/pricing.js';
 import { moneyFull, phone as fmtPhone } from '../lib/format.js';
 import { periodWord, cadenceWord, payEveryOf } from '../lib/billing.js';
 import { dbMessage } from '../firebase.js';
+import { versionLabel } from '../version.js';
 
 export function renderProfile() {
   const draw = () => screen({
@@ -136,7 +137,7 @@ export function renderProfile() {
     sectionLabel('Acerca de'),
     card(defList([
       defRow('Aplicación', 'El Águila Cocina'),
-      defRow('Versión', '1.0.0'),
+      defRow('Versión', versionLabel()),
       defRow('Moneda', 'CAD'),
     ])));
 

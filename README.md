@@ -128,6 +128,12 @@ del repositorio *es* el sitio, y `netlify.toml` ya trae la configuración.
 | Build command | *(vacío)* |
 | Publish directory | `.` |
 
+**¿Ya se publicó?** En **Perfil → Acerca de** la app dice su versión
+(`js/version.js`), que sube en uno con cada actualización. Si un teléfono dice
+un número más bajo que el de la última, ese teléfono —o Netlify— va atrás:
+revisa en Netlify → **Deploys** que el último push diga *Published*, y en el
+teléfono cierra la app y ábrela otra vez.
+
 **Autoriza el dominio en Firebase.** Sin esto el inicio de sesión de los
 clientes falla con `auth/unauthorized-domain`: consola de Firebase →
 **Authentication → Settings → Authorized domains → Add domain**, con el dominio
