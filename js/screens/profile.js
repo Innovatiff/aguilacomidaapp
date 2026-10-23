@@ -17,7 +17,7 @@ import { go } from '../lib/router.js';
 import { session, signOutNow, updateOwnProfile } from '../data/session.js';
 import { store, subscribe, periodPrice } from '../data/store.js';
 import { clientStatusMeta } from '../lib/model.js';
-import { formatDayLong, today, WEEKDAYS_SHORT } from '../lib/dates.js';
+import { formatDayLong, formatDay, today, WEEKDAYS_SHORT } from '../lib/dates.js';
 import { periodCharge, mealsOn } from '../lib/pricing.js';
 import { moneyFull, phone as fmtPhone } from '../lib/format.js';
 import { periodWord, cadenceWord, payEveryOf } from '../lib/billing.js';
@@ -57,7 +57,10 @@ export function renderProfile() {
   /** Where the food is left — the farm, and the spot inside it. */
   function farmCard() {
     const client = store.client;
-    const status = clientStatusMeta(client.status);
+    // Registered ahead: it starts on a day, it is not on pause.
+    const status = client.status === 'paused' && client.startsOn > today()
+      ? { label: `Empieza el ${formatDay(client.startsOn)}`, tone: 'info', icon: 'calendar' }
+      : clientStatusMeta(client.status);
 
     return h('div.stack.stack-3',
       sectionLabel('Dónde recibo mi comida'),

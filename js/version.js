@@ -13,7 +13,7 @@
 
 import { formatDayShort } from './lib/dates.js';
 
-export const VERSION = { n: 33, day: '2026-10-21', what: 'Número de versión en Perfil' };
+export const VERSION = { n: 34, day: '2026-10-23', what: 'Quien empieza otro día ve «Empiezas el …»' };
 
 /** "Versión 75" — for the corners with room for a word and a number. */
 export const versionShort = () => `Versión ${VERSION.n}`;

@@ -48,9 +48,11 @@ function body() {
       button('Ver mis pagos', { variant: 'ghost', block: true, icon: 'wallet', onClick: () => go('/billing') })));
 }
 
-const pausedNotice = () => alert(
-  'Tu servicio está en pausa. Escríbenos si quieres reanudar tus comidas.',
-  'warn', 'pause');
+// Registered ahead by the kitchen: not on pause, just not started yet.
+const pausedNotice = () => (store.client?.startsOn > today()
+  ? alert(`Empiezas el ${formatDayLong(store.client.startsOn)}. Ese día te llega tu primera comida.`,
+    'info', 'calendar')
+  : alert('Tu servicio está en pausa. Escríbenos si quieres reanudar tus comidas.', 'warn', 'pause'));
 
 /* --- Money ------------------------------------------------------------------ */
 
