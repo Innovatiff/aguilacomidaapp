@@ -36,6 +36,11 @@ export const toastBad = (m) => toast(m, 'bad');
 
 /* --- Bottom sheet --------------------------------------------------------- */
 
+/** Closes whatever is open, at once: the session ended, the screens are gone. */
+export function closeSheets() {
+  for (const scrim of document.querySelectorAll('.scrim')) scrim.remove();
+}
+
 /**
  * Opens a bottom sheet. `build(close)` returns the body; the returned promise
  * resolves with whatever `close(value)` was called with (undefined if dismissed).

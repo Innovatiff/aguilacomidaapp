@@ -20,7 +20,7 @@ import {
   store, subscribe, billing, currentPeriod, periodEstimate, periodPrice, paidUpTo,
 } from '../data/store.js';
 import { outstanding, balanceOf, invoiceStatus } from '../data/invoices.js';
-import { totalPaid, cancelledIds } from '../data/receipts.js';
+import { totalPaid, cancelledIds, RECEIPTS_KEPT } from '../data/receipts.js';
 import { sheet } from '../ui/overlay.js';
 import {
   STATUS_LABEL, STATUS_TONE, isCharge, invoiceTitle, appliedTitle, periodWord, payDayAfter, paidFor,
@@ -59,14 +59,22 @@ function body() {
     due.length ? sectionLabel('Por pagar') : null,
     due.length ? list(due.map(invoiceRow), { card: true }) : null,
 
+    // Every receipt the app has, and a total that is the total of those: the
+    // list used to stop at twenty while the figure beside its title added up
+    // forty, and no row accounted for the difference.
     sectionLabel('Mis recibos', receipts.length
-      ? h('span.t-sm.c-soft', `${money(totalPaid(receipts), { round: true })} pagados`)
+      ? h('span.t-sm.c-soft', `${money(totalPaid(receipts))} pagados`)
       : null),
     receipts.length
-      ? list(receipts.slice(0, 20).map(
+      ? list(receipts.map(
           (row) => receiptRow(row, cancelledIds(receipts).has(row.id))), { card: true })
       : card(h('p.t-sm.c-soft.center',
           'Todavía no hay pagos. Cuando pagues en la cocina, tu recibo aparece aquí solo.')),
+    receipts.length >= RECEIPTS_KEPT
+      ? h('p.t-xs.c-faint.center',
+          `Estos son tus últimos ${RECEIPTS_KEPT} recibos, y el total es el de ellos. `
+          + 'Si necesitas uno anterior, escríbenos.')
+      : null,
 
     h('p.t-xs.c-faint.center', { style: { marginTop: '8px' } },
       'Los montos los registra la cocina. Si algo no coincide, escríbenos.'));
@@ -114,7 +122,9 @@ function runningPeriodCard() {
     card(h('div.stack.stack-3',
       h('div.row.row--between',
         h('span.t-sm.c-soft', formatRange(period.start, period.end)),
-        h('span.w-700', money(estimate.amount, { round: true }))),
+        // To the cent, as everywhere else: rounded, $152.50 read "$153"
+        // here and "$152.50" on Inicio, for the same fortnight.
+        h('span.w-700', money(estimate.amount))),
       meter(percent(elapsed, span)),
       h('div.t-xs.c-faint',
         `${plural(store.client?.mealsPerDay || 0, 'comida', 'comidas')} al día · `
@@ -135,7 +145,7 @@ function invoiceRow(invoice) {
     meta: `${status === 'overdue' ? 'Venció' : 'Vence'} ${formatDay(invoice.dueDate)} · ${moneyFull(invoice.amount)}`
       + `${isCharge(invoice) ? ' · cargo' : ''}`,
     end: [
-      h('span.w-700', money(balanceOf(invoice), { round: true })),
+      h('span.w-700', money(balanceOf(invoice))),
       badge(STATUS_LABEL[status], STATUS_TONE[status]),
     ],
     onClick: () => openInvoice(invoice),
@@ -224,10 +234,14 @@ function openReceipt(receipt, wasCancelled = false) {
       // on the screen.
       // A payment the kitchen kept whole, to be put on your fortnights after:
       // the money is in, and the balance is not something it can say yet.
+      // Nor one the kitchen copied in from its notebook: what was left after
+      // it was never worked out, and the zero it carries is not "al corriente".
       dead
         ? null
         : receipt.held
           ? alert('Recibimos este pago. La cocina lo aplica a tus quincenas.', 'ok')
+          : receipt.fromNotebook
+            ? alert('Este pago ya está en tu cuenta. Lo que debes hoy está en Pagos.', 'ok')
           : alert((receipt.balanceAfter || 0) > 0.005
             ? `Después de este pago quedaban ${money(receipt.balanceAfter)} pendientes.`
             : 'Con este pago quedaste al corriente.',
@@ -241,6 +255,9 @@ function openReceipt(receipt, wasCancelled = false) {
 }
 
 /* --- Invoice detail ------------------------------------------------------------ */
+
+/** The meals a bill is for: the plan's count, or what an older bill kept. */
+const mealsOf = (invoice) => Number(invoice?.plannedMeals) || Number(invoice?.meals) || 0;
 
 function openInvoice(invoice) {
   const status = invoice.uiStatus || invoiceStatus(invoice, today());
@@ -272,11 +289,16 @@ function openInvoice(invoice) {
             defRow('Plan', invoice.mealsPerDay
               ? `${number(invoice.mealsPerDay)} ${invoice.mealsPerDay === 1 ? 'comida' : 'comidas'} al día`
               : '—'),
-            defRow('Comidas entregadas', number(invoice.meals)),
+            // What the plan gives that period — the count a bill always has.
+            // "Comidas entregadas" read 0 on every bill written at the
+            // counter, under a total that plainly was not for no food.
+            mealsOf(invoice)
+              ? defRow(`Comidas de la ${periodWord(invoice)}`, number(mealsOf(invoice)))
+              : null,
             defRow(`Total de la ${periodWord(invoice)}`, moneyFull(invoice.amount)),
             defRow('Pagado', money(invoice.paid || 0)),
             defRow('Fecha límite', formatDayLong(invoice.dueDate)),
-          ])),
+          ].filter(Boolean))),
 
       // Why the number is not what it was. Without this, a bill that quietly
       // went from $140 to $70 is a bill the client cannot check — and one that

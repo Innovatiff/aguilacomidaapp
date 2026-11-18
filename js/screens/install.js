@@ -93,6 +93,19 @@ export function renderInstall(host, { email = '', onEnter } = {}) {
   const mine = platform();
   const others = ['ios', 'android', 'desktop'].filter((key) => key !== mine);
 
+  // Chrome's offer to install usually arrives after this screen is drawn —
+  // it comes once the page has finished loading — and the button was only
+  // ever built if it was already there. Drawn again when it comes. (The
+  // listener in index.html is older than this one, so it has kept the event
+  // by the time this runs.)
+  if (!installed() && !window.__installPrompt) {
+    window.addEventListener('beforeinstallprompt', () => {
+      setTimeout(() => {
+        if (window.__installPrompt && host.querySelector('.inst__how')) renderInstall(host, { email, onEnter });
+      }, 0);
+    }, { once: true });
+  }
+
   mount(host, h('div.auth',
     h('div.auth__hero',
       h('div.auth__mark',
@@ -111,8 +124,10 @@ export function renderInstall(host, { email = '', onEnter } = {}) {
         ? h('div.card.inst__me',
             h('div.t-xs.upper.c-faint.w-700', 'Tu correo'),
             h('div.inst__mail', email),
-            h('p.t-sm.c-soft', 'Con ese correo entras. Si todavía no tienes contraseña, '
-              + 'pídesela a la cocina.'),
+            // The kitchen has no password to give: each person chooses
+            // theirs, the first time they come in.
+            h('p.t-sm.c-soft', 'Con ese correo entras. Si es tu primera vez, entra y toca '
+              + '«Crear cuenta»: la contraseña la eliges tú.'),
             button('Copiar mi correo', {
               variant: 'ghost', size: 'sm', block: true, icon: 'copy',
               onClick: async () => {

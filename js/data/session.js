@@ -76,6 +76,11 @@ export function startSession() {
       return;
     }
 
+    // Not known yet, for this person. Left at what the signed-out screen had
+    // set, somebody who had just created their account was shown "Falta
+    // registrarte" for the moment it takes the kitchen's record to answer.
+    state.ready = false;
+
     stopLink = onSnapshot(
       doc(db, 'clientEmails', email),
       // Told when the server confirms what the phone's own copy said, too.
@@ -103,7 +108,11 @@ export function startSession() {
         emit();
       },
       () => {
-        // A refused read means "not registered" just as clearly as an empty one.
+        // A refused read means "not registered" just as clearly as an empty
+        // one — for somebody not known yet. A listener that fails later, with
+        // their record already in hand, is the connection, and must not throw
+        // a client out of their own account to "Falta registrarte".
+        if (state.ready && state.link) return;
         state.link = null;
         state.ready = true;
         emit();

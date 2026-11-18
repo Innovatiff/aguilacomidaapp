@@ -65,10 +65,27 @@
       // happen to reload, which is exactly how a shipped fix looks like it
       // never happened.
       navigator.serviceWorker.addEventListener('controllerchange', function () {
-        if (reloading || !hadController) return;
+        if (!hadController) { keepWhatLoaded(); return; }
+        if (reloading) return;
         reloading = true;
         window.location.reload();
       });
+
+      // The first visit ever. Everything this page loaded, it loaded before
+      // there was a worker to keep a copy — so the app only opened with no
+      // signal from the *second* visit on, and somebody who installed it at
+      // the store and next opened it out on the farm got a blank page. Asked
+      // for again now that the worker is listening (from the browser's own
+      // cache, so it costs next to nothing), each file is kept.
+      function keepWhatLoaded() {
+        try {
+          performance.getEntriesByType('resource').forEach(function (entry) {
+            if (/\.(?:js|css|svg|png|webmanifest)(?:\?|$)/.test(entry.name)) {
+              fetch(entry.name).catch(function () {});
+            }
+          });
+        } catch (e) { /* an old browser: the second visit fills the cache, as before */ }
+      }
 
       window.addEventListener('load', function () {
         navigator.serviceWorker.register('./sw.js').then(function (reg) {

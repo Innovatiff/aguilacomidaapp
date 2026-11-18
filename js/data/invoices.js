@@ -47,7 +47,9 @@ export const outstanding = (invoices, day = today(), client = null) => invoices
   .filter((invoice) => balanceOf(invoice) > 0.005)
   .filter((invoice) => isCharge(invoice)
     || isPayable({ start: invoice.periodStart, end: invoice.periodEnd }, client, day))
-  .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+  // As text, whatever is there: a bill with no due date sorts first instead
+  // of stopping Pagos from opening.
+  .sort((a, b) => String(a.dueDate || '').localeCompare(String(b.dueDate || '')))
   .map((invoice) => ({ ...invoice, uiStatus: invoiceStatus(invoice, day) }));
 
 export const settledInvoices = (invoices) => invoices.filter((invoice) => balanceOf(invoice) <= 0.005);

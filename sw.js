@@ -75,7 +75,11 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(request).then((hit) => hit || caches.match('./index.html'))),
+        // The page itself can stand in for a navigation that has no copy. It
+        // cannot stand in for a script: answering a missing module with HTML
+        // is an app that fails in a way nothing can report.
+        .catch(() => caches.match(request).then((hit) => hit
+          || (request.mode === 'navigate' ? caches.match('./index.html') : Response.error()))),
     );
     return;
   }

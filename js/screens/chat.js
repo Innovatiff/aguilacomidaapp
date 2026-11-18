@@ -48,12 +48,16 @@ export function renderChat(context) {
       if (context.query.ask === 'payment') {
         view.node.querySelector('.chat__composer')
           ?.insertText?.('¿Me pueden enviar los datos para el pago?');
+        // Asked once. Left in the address, the question was typed into the
+        // box again on every return to this screen — after sending it, after
+        // Atrás, after opening the app the next day.
+        history.replaceState(null, '', '#/chat');
       }
     }
 
     const summary = billing();
     const owes = (summary?.balance || 0) > 0;
-    const text = owes ? `Saldo ${money(summary.balance, { round: true })}` : 'Al corriente';
+    const text = owes ? `Saldo ${money(summary.balance)}` : 'Al corriente';
 
     // Drawn once. A reply from the kitchen, a payment — anything new — would
     // otherwise rebuild the page around the box somebody is typing in, and on

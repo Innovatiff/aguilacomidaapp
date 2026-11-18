@@ -200,6 +200,38 @@ Abrir un hilo de 200 mensajes es una escritura pequeña, no 200.
 **Persistencia sin conexión activada.** Los ranchos están donde la señal es
 mala; la app abre y muestra lo último que sabe.
 
+**La página es la que se desliza, no el documento.** Con sesión iniciada el
+marco mide exactamente una pantalla y lo que se mueve es la página dentro de
+él, también en el teléfono. Así la conversación abre en el último mensaje con
+la caja para escribir a la vista, y cada pestaña abre donde se dejó la suya.
+
+**Abre sin señal desde la primera visita.** La primera vez, lo que la página
+cargó llegó antes de que hubiera un service worker para guardarlo; en cuanto
+toma el control, la página se lo vuelve a pedir (sale de la memoria del
+navegador) y queda guardado. A un módulo que falta sin señal ya no se le
+contesta con la página de inicio.
+
+### Versión 35: repaso y correcciones
+
+- **Mensajes en el teléfono:** la conversación abre abajo, en lo último, y la
+  caja para escribir ya no queda debajo de todo el hilo. Lo que se estaba
+  escribiendo se conserva al cambiar de pestaña; la pregunta de «Pedir datos
+  de pago» se pone una sola vez; «Hoy» deja de decir «Hoy» al pasar la
+  medianoche; un mensaje sólo se marca leído con la app al frente.
+- **Pagos:** los montos van con centavos en todos lados (antes $152.50 salía
+  «$153» en Pagos y «$152.50» en Inicio); «Mis recibos» lista todos los que
+  suma su total; la factura dice las comidas de la quincena (antes «Comidas
+  entregadas 0»); el recibo de un pago traído del cuaderno ya no dice
+  «quedaste al corriente»; a quien paga por semana se le habla de semanas.
+- **Entrar:** quien crea su cuenta ya no ve «Falta registrarte» mientras
+  contesta la cocina; una falla de conexión no saca de su cuenta a quien ya
+  estaba dentro; un error al entrar no borra lo escrito; al cerrar sesión, la
+  siguiente persona abre en Inicio.
+- **Perfil** muestra el nombre y el teléfono recién guardados.
+- **Instalar:** el botón «Instalar la app» aparece cuando el teléfono lo
+  ofrece (llegaba tarde y nunca se dibujaba), y la pantalla ya no manda a
+  pedirle una contraseña a la cocina: cada quien la elige en «Crear cuenta».
+
 ---
 
 ## Privacidad

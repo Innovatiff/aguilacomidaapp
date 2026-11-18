@@ -127,6 +127,17 @@
 .item__end { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: none; }
 .item--tap-target { min-height: 62px; }
 
+/* A row's second line takes a second line of its own rather than end in "…":
+   on a phone "Venció 21 de octubre · $266.00 CAD" lost the end of the amount,
+   which is the part somebody opens the list to read. Two lines at most. */
+.item__meta.truncate {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* Icon standing in for an avatar — a location, a period, a document. */
 .item__ico {
   flex: none; display: grid; place-items: center;

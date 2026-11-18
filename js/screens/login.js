@@ -26,9 +26,25 @@ export function renderAuth(host) {
    *  late redraw here would paint the login form back over the app. */
   let handedOff = false;
 
+  /**
+   * What is in the boxes, kept across redraws. The form is built again to say
+   * "Un momento…", again to say why it was refused, and again when going from
+   * «Entrar» to «Crear cuenta» — and came back empty every time: one wrong
+   * letter in the password and the name, the address and the phone had to be
+   * typed again, on a phone.
+   */
+  const typed = { name: '', email: '', phone: '', password: '' };
+  const keep = () => {
+    for (const name of Object.keys(typed)) {
+      const box = host.querySelector(`input[name="${name}"]`);
+      if (box) typed[name] = box.value;
+    }
+  };
+
   const draw = () => { if (!handedOff) mount(host, view()); };
 
   function set(next) {
+    keep();
     mode = next; error = ''; notice = ''; draw();
   }
 
@@ -37,6 +53,7 @@ export function renderAuth(host) {
     if (busy) return;
 
     const values = Object.fromEntries(new FormData(event.target).entries());
+    keep();
     busy = true; error = ''; draw();
 
     try {
@@ -104,14 +121,16 @@ export function renderAuth(host) {
 
           mode === 'signup' ? field({
             label: 'Tu nombre',
-            control: input({ name: 'name', required: true, autocomplete: 'name', placeholder: 'Rafael Núñez' }),
+            control: input({
+              name: 'name', required: true, autocomplete: 'name', placeholder: 'Rafael Núñez', value: typed.name,
+            }),
           }) : null,
 
           field({
             label: 'Correo',
             control: input({
               name: 'email', type: 'email', required: true, autocomplete: 'email',
-              inputmode: 'email', placeholder: 'tu@correo.com',
+              inputmode: 'email', placeholder: 'tu@correo.com', value: typed.email,
             }),
             hint: mode === 'signup'
               ? 'Tiene que ser el correo que la cocina registró a tu nombre.'
@@ -121,13 +140,15 @@ export function renderAuth(host) {
           mode === 'signup' ? field({
             label: 'Teléfono',
             hint: 'Para que la cocina pueda localizarte.',
-            control: input({ name: 'phone', type: 'tel', autocomplete: 'tel', placeholder: '(604) 555-0143' }),
+            control: input({
+              name: 'phone', type: 'tel', autocomplete: 'tel', placeholder: '(604) 555-0143', value: typed.phone,
+            }),
           }) : null,
 
           mode !== 'reset' ? field({
             label: 'Contraseña',
             hint: mode === 'signup' ? 'Mínimo 6 caracteres.' : null,
-            control: passwordInput(mode),
+            control: passwordInput(mode, typed.password),
           }) : null,
 
           h('button.btn.btn--primary.btn--block.btn--lg', { type: 'submit', disabled: busy },
@@ -151,11 +172,11 @@ export function renderAuth(host) {
 }
 
 /** Password field with a show/hide toggle — typing blind on a phone is worse. */
-function passwordInput(mode) {
+function passwordInput(mode, value = '') {
   const box = input({
     name: 'password', type: 'password', required: true, minlength: 6,
     autocomplete: mode === 'signup' ? 'new-password' : 'current-password',
-    placeholder: '••••••••',
+    placeholder: '••••••••', value,
   });
 
   const toggle = h('button.input-group__icon', {

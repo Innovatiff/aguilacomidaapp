@@ -15,8 +15,11 @@ import {
   limit as qLimit, docData, listData,
 } from '../firebase.js';
 
+/** How many receipts the app keeps at hand: the newest ones. */
+export const RECEIPTS_KEPT = 40;
+
 /** This person's receipts, newest first. */
-export function watchReceipts(clientId, onData, onError, count = 40) {
+export function watchReceipts(clientId, onData, onError, count = RECEIPTS_KEPT) {
   return onSnapshot(
     query(collection(db, 'receipts'), where('clientId', '==', clientId),
       orderBy('at', 'desc'), qLimit(count)),

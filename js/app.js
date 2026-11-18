@@ -11,7 +11,7 @@
 
 import { $ } from './lib/dom.js';
 import { configureShell, clearShell, setTabBadge, splash, notePath, screen } from './ui/shell.js';
-import { register, setNotFound, start, go, onNavigate } from './lib/router.js';
+import { register, setNotFound, start, stop, go, onNavigate } from './lib/router.js';
 import { startSession, watchSession, session } from './data/session.js';
 import { startStore, stopStore, subscribe, unreadCount } from './data/store.js';
 import { renderAuth } from './screens/login.js';
@@ -21,6 +21,7 @@ import { renderBilling } from './screens/billing.js';
 import { renderChat } from './screens/chat.js';
 import { renderProfile } from './screens/profile.js';
 import { button, emptyState } from './ui/kit.js';
+import { closeSheets } from './ui/overlay.js';
 import { renderInstall, installWanted, emailFromHash } from './screens/install.js';
 
 const TABS = [
@@ -76,6 +77,9 @@ function enter(next, clientId = null) {
   if (phase === 'app') {
     stopBadge?.();
     stopBadge = null;
+    // The screen on show first: it is still listening to the store.
+    stop();
+    closeSheets();
     stopStore();
     linkedTo = null;
   }

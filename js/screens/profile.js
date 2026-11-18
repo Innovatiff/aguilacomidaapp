@@ -14,7 +14,7 @@ import {
 } from '../ui/kit.js';
 import { toastOk, toastBad, confirm, sheet } from '../ui/overlay.js';
 import { go } from '../lib/router.js';
-import { session, signOutNow, updateOwnProfile } from '../data/session.js';
+import { session, signOutNow, updateOwnProfile, watchSession } from '../data/session.js';
 import { store, subscribe, periodPrice } from '../data/store.js';
 import { clientStatusMeta } from '../lib/model.js';
 import { formatDayLong, formatDay, today, WEEKDAYS_SHORT } from '../lib/dates.js';
@@ -58,7 +58,8 @@ export function renderProfile() {
   function farmCard() {
     const client = store.client;
     // Registered ahead: it starts on a day, it is not on pause.
-    const status = client.status === 'paused' && client.startsOn > today()
+    const ahead = client.status === 'paused' && client.startsOn > today();
+    const status = ahead
       ? { label: `Empieza el ${formatDay(client.startsOn)}`, tone: 'info', icon: 'calendar' }
       : clientStatusMeta(client.status);
 
@@ -70,7 +71,9 @@ export function renderProfile() {
             h('div.t-lg.w-700', client.farmName || 'Tu rancho'),
             client.locationName ? h('div.t-sm.c-soft', client.locationName) : null),
           badge(status.label, status.tone, status.icon)),
-        client.status !== 'active'
+        // Not to somebody who has not started yet: "en pausa, escríbenos para
+        // reanudarlo" under "Empieza el 23" told them two different things.
+        client.status !== 'active' && !ahead
           ? alert('Tu servicio está en pausa. Escríbenos para reanudarlo.', 'warn')
           : null)));
   }
@@ -181,5 +184,10 @@ export function renderProfile() {
     await signOutNow();
   }
 
-  return subscribe(draw);
+  // The name and the phone at the top are the session's, not the store's:
+  // saved from «Editar mis datos», the card went on showing the old ones
+  // until the app was opened again.
+  const stopStore = subscribe(draw);
+  const stopSession = watchSession(() => { if (session.user) draw(); });
+  return () => { stopStore(); stopSession(); };
 }

@@ -57,6 +57,20 @@ img, svg { display: block; max-width: 100%; }
   #app { min-height: 100dvh; }
 }
 
+/* Once somebody is in, the frame is exactly one screen tall and the page
+   inside it is what scrolls — at every width, not only on a computer.
+
+   On a phone the frame used to grow with its contents, so it was the whole
+   document that scrolled and never the page: the chat opened on its oldest
+   message with the box to write in below the entire conversation, and a tab
+   opened wherever the last one had been left. (`vh` first, for the browsers
+   that do not know `dvh`.) */
+#app.app--shell {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+}
+
 /* A tablet in portrait is still a touch device — the bar belongs at the bottom,
    under a thumb — but a 520px column on a 800px screen is half a screen wasted.
    Widening the canvas is one variable: the frame, the bar, the action button

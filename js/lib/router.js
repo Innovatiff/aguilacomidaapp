@@ -92,5 +92,20 @@ export function start() {
   return resolve();
 }
 
+/**
+ * Leaves the screen on show and stops following the address: the session is
+ * over. Its listeners are let go, and the address goes back to the start, so
+ * whoever signs in next on this phone opens on Inicio and not on the screen
+ * the last person signed out from.
+ */
+export function stop() {
+  window.removeEventListener('hashchange', resolve);
+  if (current?.teardown) {
+    try { current.teardown(); } catch { /* nothing to undo */ }
+  }
+  current = null;
+  if (location.hash && location.hash !== '#/') history.replaceState(null, '', '#/');
+}
+
 /** The route currently on screen, for highlighting the active tab. */
 export const currentPath = () => current?.path || path();
