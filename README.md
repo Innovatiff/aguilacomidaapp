@@ -211,7 +211,7 @@ toma el control, la página se lo vuelve a pedir (sale de la memoria del
 navegador) y queda guardado. A un módulo que falta sin señal ya no se le
 contesta con la página de inicio.
 
-### Versión 35: repaso y correcciones
+### Versiones 35 y 36: repaso y correcciones
 
 - **Mensajes en el teléfono:** la conversación abre abajo, en lo último, y la
   caja para escribir ya no queda debajo de todo el hilo. Lo que se estaba
@@ -231,6 +231,9 @@ contesta con la página de inicio.
 - **Instalar:** el botón «Instalar la app» aparece cuando el teléfono lo
   ofrece (llegaba tarde y nunca se dibujaba), y la pantalla ya no manda a
   pedirle una contraseña a la cocina: cada quien la elige en «Crear cuenta».
+- La **36** (el mismo día): una pestaña que se dejó hasta arriba abre hasta
+  arriba, y en el teléfono un mensaje se marca leído al abrir la conversación
+  aunque todavía no se haya tocado la pantalla.
 
 ---
 

@@ -334,7 +334,9 @@ function origin(here) {
  * remembers which screen led here.
  */
 export function notePath(path) {
-  if (page && page.scrollTop > 0) scrollMemory.set(lastPath, page.scrollTop);
+  // Zero included: a tab left at its very top must open at its top, not at
+  // wherever it had been scrolled to the time before.
+  if (page) scrollMemory.set(lastPath, page.scrollTop);
 
   // Coming back up out of a screen's own form does not rewrite where the
   // screen was reached from: somebody who opened a client from the roster,

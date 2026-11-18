@@ -36,8 +36,16 @@ export const toastBad = (m) => toast(m, 'bad');
 
 /* --- Bottom sheet --------------------------------------------------------- */
 
-/** Closes whatever is open, at once: the session ended, the screens are gone. */
+/** The `close` of every sheet that is open, so they can be closed from outside. */
+const closers = new Set();
+
+/**
+ * Closes whatever is open, at once: the session ended, the screens are gone.
+ * Closed properly — each sheet's caller gets its answer and its listeners are
+ * let go — and then taken off the page without waiting for the animation.
+ */
 export function closeSheets() {
+  for (const close of [...closers]) close(undefined);
   for (const scrim of document.querySelectorAll('.scrim')) scrim.remove();
 }
 
@@ -52,6 +60,7 @@ export function sheet({ title, build, foot, dismissible = true }) {
     const close = (value) => {
       if (settled) return;
       settled = true;
+      closers.delete(close);
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('hashchange', onLeave);
       scrim.style.animation = 'fade 160ms var(--ease) reverse';
@@ -86,6 +95,7 @@ export function sheet({ title, build, foot, dismissible = true }) {
 
     document.addEventListener('keydown', onKey);
     window.addEventListener('hashchange', onLeave);
+    closers.add(close);
     document.body.append(scrim);
 
     // Focus the first real control so keyboards and screen readers land inside.
