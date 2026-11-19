@@ -211,7 +211,7 @@ toma el control, la página se lo vuelve a pedir (sale de la memoria del
 navegador) y queda guardado. A un módulo que falta sin señal ya no se le
 contesta con la página de inicio.
 
-### Versiones 35 y 36: repaso y correcciones
+### Versiones 35 a 37: repaso y correcciones
 
 - **Mensajes en el teléfono:** la conversación abre abajo, en lo último, y la
   caja para escribir ya no queda debajo de todo el hilo. Lo que se estaba
@@ -234,6 +234,9 @@ contesta con la página de inicio.
 - La **36** (el mismo día): una pestaña que se dejó hasta arriba abre hasta
   arriba, y en el teléfono un mensaje se marca leído al abrir la conversación
   aunque todavía no se haya tocado la pantalla.
+- La **37**: en un iPhone con la app en la pantalla de inicio quedaba una
+  franja vacía debajo de la barra de abajo; ahora el marco llega al borde
+  (`--vh-short`, ver `css/base.css` y el script al inicio de `index.html`).
 
 ---
 
