@@ -238,6 +238,25 @@ contesta con la página de inicio.
   franja vacía debajo de la barra de abajo; ahora el marco llega al borde
   (`--vh-short`, ver `css/base.css` y el script al inicio de `index.html`).
 
+### Versión 38: lo que de verdad se paga
+
+- **Quien empieza a media quincena.** El plan se vende completo, así que la
+  cocina no cobra como quincena la que ya iba corriendo cuando alguien empezó.
+  La app se la mostraba de todos modos — con su precio completo y su «Próximo
+  pago» — y ese día en la caja no le pedían nada. Ahora Inicio dice **Mi
+  primera quincena** con las fechas de la primera que sí paga y su **Primer
+  pago**, y Pagos marca la que está en curso como **Tus primeros días** (o
+  **Todavía no empiezas**, para quien se registró con fecha de inicio). Es la
+  misma regla que usa el panel (`paysPeriod` en `js/lib/billing.js`); si la
+  cocina cobra algo por esos primeros días, se lo dice ella.
+- **Lo que debes** deja fuera una factura de una quincena que empezó después
+  de tu último día: no la comiste.
+- **La fecha límite** nunca es antes del día de cobro. En las farmas con
+  «mismo día» la quincena salía «vencida» la mañana en que tocaba pagarla.
+- **Una factura vieja sin fecha límite** se muestra como saldo pendiente, sin
+  cuenta regresiva ni «venció hace…»: dice «Sin fecha límite».
+- El recibo de la última quincena de alguien que se va ya no dice «a cuenta».
+
 ---
 
 ## Privacidad

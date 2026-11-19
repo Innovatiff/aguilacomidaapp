@@ -13,7 +13,7 @@
 
 import { formatDayShort } from './lib/dates.js';
 
-export const VERSION = { n: 37, day: '2026-11-19', what: 'En el iPhone, la barra de abajo llega al borde' };
+export const VERSION = { n: 38, day: '2026-11-19', what: 'Tu primera quincena: la que de verdad pagas, y cuándo' };
 
 /** "Versión 75" — for the corners with room for a word and a number. */
 export const versionShort = () => `Versión ${VERSION.n}`;

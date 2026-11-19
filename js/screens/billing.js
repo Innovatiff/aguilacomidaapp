@@ -17,14 +17,14 @@ import {
 import { balanceHeadline } from '../ui/balance.js';
 import { go } from '../lib/router.js';
 import {
-  store, subscribe, billing, currentPeriod, periodEstimate, periodPrice, paidUpTo,
+  store, subscribe, billing, currentPeriod, periodEstimate, periodPrice, paidUpTo, lateStart,
 } from '../data/store.js';
 import { outstanding, balanceOf, invoiceStatus } from '../data/invoices.js';
 import { totalPaid, cancelledIds, RECEIPTS_KEPT } from '../data/receipts.js';
 import { sheet } from '../ui/overlay.js';
 import {
   STATUS_LABEL, STATUS_TONE, isCharge, invoiceTitle, appliedTitle, periodWord, payDayAfter, paidFor,
-  paymentsOf,
+  paymentsOf, dueOf,
 } from '../lib/billing.js';
 import { paymentMethodMeta } from '../lib/model.js';
 import {
@@ -91,11 +91,14 @@ function balanceCard(summary) {
     balanceHeadline(summary),
 
     owes
-      ? alert(
-          days < 0
-            ? `Venció ${humanDelta(days)} — ${formatDayLong(summary.dueDate)}.`
-            : `Vence ${humanDelta(days)} — ${formatDayLong(summary.dueDate)}.`,
-          summary.status === 'overdue' ? 'bad' : days <= 2 ? 'warn' : 'info')
+      // A bill saved long ago can carry no deadline: said without a date.
+      ? (summary.hasDeadline
+          ? alert(
+              days < 0
+                ? `Venció ${humanDelta(days)} — ${formatDayLong(summary.dueDate)}.`
+                : `Vence ${humanDelta(days)} — ${formatDayLong(summary.dueDate)}.`,
+              summary.status === 'overdue' ? 'bad' : days <= 2 ? 'warn' : 'info')
+          : alert('Tienes un saldo pendiente con la cocina.', 'info'))
       : alert(paidUpTo()
         ? `Estás al corriente: pagaste hasta el ${formatDay(paidUpTo())}. Gracias.`
         : 'Estás al corriente con la cocina. Gracias.', 'ok'),
@@ -116,6 +119,28 @@ function runningPeriodCard() {
   const span = period.every;
   const elapsed = Math.max(0, Math.min(span, daysBetween(period.start, today()) + 1));
   const word = periodWord(store.client);
+
+  // Started with this one already under way: it is not charged as a whole
+  // one, so it is not shown with a price. What they pay first is said below.
+  const late = lateStart();
+  if (late) {
+    const payDay = payDayAfter(late.first);
+    return h('div.stack.stack-3',
+      sectionLabel(`${word === 'semana' ? 'Semana' : 'Quincena'} en curso`),
+      card(h('div.stack.stack-3',
+        h('div.row.row--between',
+          h('span.t-sm.c-soft', formatRange(period.start, period.end)),
+          h('span.t-sm.w-700', late.upcoming ? 'Todavía no empiezas' : 'Tus primeros días')),
+        late.upcoming ? null : meter(percent(elapsed, span)),
+        alert(`${late.upcoming ? 'Empiezas' : 'Empezaste'} el ${formatDay(late.since)}`
+          + `${late.partial ? `, con ${late.upcoming ? 'la' : 'esta'} ${word} ya empezada` : ''}. La primera `
+          + `${word}${late.partial ? ' completa' : ''} que pagas es la del `
+          + `${formatRange(late.first.start, late.first.end)}`
+          + `${periodPrice() ? `: ${money(periodPrice())}` : ''}, el ${weekdayName(payDay)} `
+          + `${formatDay(payDay)}.`
+          + `${late.partial ? ' Por tus primeros días, la cocina te dice si hay algo que pagar.' : ''}`,
+        'info'))));
+  }
 
   return h('div.stack.stack-3',
     sectionLabel(`${word === 'semana' ? 'Semana' : 'Quincena'} en curso`),
@@ -142,7 +167,10 @@ function invoiceRow(invoice) {
   const status = invoice.uiStatus || invoiceStatus(invoice, today());
   return itemRow({
     title: invoiceTitle(invoice),
-    meta: `${status === 'overdue' ? 'Venció' : 'Vence'} ${formatDay(invoice.dueDate)} · ${moneyFull(invoice.amount)}`
+    // A bill saved long ago can carry no deadline.
+    meta: `${dueOf(invoice)
+      ? `${status === 'overdue' ? 'Venció' : 'Vence'} ${formatDay(dueOf(invoice))}`
+      : 'Sin fecha límite'} · ${moneyFull(invoice.amount)}`
       + `${isCharge(invoice) ? ' · cargo' : ''}`,
     end: [
       h('span.w-700', money(balanceOf(invoice))),
@@ -283,7 +311,7 @@ function openInvoice(invoice) {
             defRow('Fecha', formatDayLong(invoice.periodStart)),
             defRow('Total', moneyFull(invoice.amount)),
             defRow('Pagado', money(invoice.paid || 0)),
-            defRow('Fecha límite', formatDayLong(invoice.dueDate)),
+            defRow('Fecha límite', dueOf(invoice) ? formatDayLong(dueOf(invoice)) : '—'),
           ]
         : [
             defRow('Plan', invoice.mealsPerDay
@@ -297,7 +325,7 @@ function openInvoice(invoice) {
               : null,
             defRow(`Total de la ${periodWord(invoice)}`, moneyFull(invoice.amount)),
             defRow('Pagado', money(invoice.paid || 0)),
-            defRow('Fecha límite', formatDayLong(invoice.dueDate)),
+            defRow('Fecha límite', dueOf(invoice) ? formatDayLong(dueOf(invoice)) : '—'),
           ].filter(Boolean))),
 
       // Why the number is not what it was. Without this, a bill that quietly

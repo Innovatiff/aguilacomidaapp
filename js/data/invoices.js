@@ -6,7 +6,7 @@
 import {
   db, collection, onSnapshot, query, where, orderBy, limit as qLimit, listData,
 } from '../firebase.js';
-import { balanceOf, invoiceStatus, isCharge, isPayable } from '../lib/billing.js';
+import { balanceOf, invoiceStatus, isOwed, dueOf } from '../lib/billing.js';
 import { today } from '../lib/dates.js';
 
 export function watchInvoices(clientId, onData, onError, count = 24) {
@@ -41,15 +41,15 @@ export function watchUnsettled(clientId, onData, onError) {
  * Everything still owed, soonest deadline first.
  *
  * Only for food already eaten: a bill for the fortnight still running is paid
- * the day it ends, not before.
+ * the day it ends, not before — and one for a fortnight that began after their
+ * last day is not owed at all (`isOwed`, the rule the kitchen's panel uses).
  */
 export const outstanding = (invoices, day = today(), client = null) => invoices
   .filter((invoice) => balanceOf(invoice) > 0.005)
-  .filter((invoice) => isCharge(invoice)
-    || isPayable({ start: invoice.periodStart, end: invoice.periodEnd }, client, day))
-  // As text, whatever is there: a bill with no due date sorts first instead
+  .filter((invoice) => isOwed(invoice, client, day))
+  // As text, whatever is there: a bill with no due date sorts last instead
   // of stopping Pagos from opening.
-  .sort((a, b) => String(a.dueDate || '').localeCompare(String(b.dueDate || '')))
+  .sort((a, b) => String(dueOf(a) || '9999').localeCompare(String(dueOf(b) || '9999')))
   .map((invoice) => ({ ...invoice, uiStatus: invoiceStatus(invoice, day) }));
 
 export const settledInvoices = (invoices) => invoices.filter((invoice) => balanceOf(invoice) <= 0.005);

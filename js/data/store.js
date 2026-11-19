@@ -11,8 +11,11 @@ import { watchClient } from './clients.js';
 import { watchInvoices, watchUnsettled } from './invoices.js';
 import { watchReceipts } from './receipts.js';
 import { watchConversation } from './chat.js';
-import { today } from '../lib/dates.js';
-import { summarize, periodOf, projectPeriod, paidThroughOn } from '../lib/billing.js';
+import { today, dayKey } from '../lib/dates.js';
+import {
+  summarize, periodOf, projectPeriod, paidThroughOn, paysPeriod, firstPaidPeriod,
+} from '../lib/billing.js';
+import { toDate } from '../firebase.js';
 import { watchPricing } from './pricing.js';
 import { DEFAULT_PRICING, chargeFor } from '../lib/pricing.js';
 
@@ -155,6 +158,46 @@ export const paidUpTo = () => {
   if (!client?.paidThrough) return null;
   const through = paidThroughOn(client, client.paidThrough);
   return through < periodOf(client).start ? through : null;
+};
+
+/**
+ * The day they started eating here: what the kitchen wrote down, or — for
+ * somebody registered before it wrote that — the day they were registered.
+ */
+export const servingSince = () => {
+  const client = state.client;
+  if (!client) return '';
+  if (client.startedOn) return client.startedOn;
+  const created = toDate(client.createdAt);
+  return created ? dayKey(created) : '';
+};
+
+/**
+ * For somebody who started with a period already under way — or who has not
+ * started yet: the first one they pay, and the day they start. Null for
+ * everybody else.
+ *
+ * The plan is sold whole, so the kitchen does not charge the period somebody
+ * joined halfway (`paysPeriod`). This app used to show it to them anyway —
+ * its dates, its full price, its pay day — and on that day the counter asked
+ * them for nothing.
+ */
+export const lateStart = () => {
+  const client = state.client;
+  const period = currentPeriod();
+  if (!client || !period) return null;
+  const since = servingSince();
+  if (paysPeriod(period, since)) return null;
+  const first = firstPaidPeriod(client, since, state.day);
+  return {
+    since,
+    first,
+    // Registered ahead: their first day is still to come.
+    upcoming: since > state.day,
+    // Whether the one they start in is left out — or they simply start in a
+    // later one than today's, and pay it whole.
+    partial: first.start !== periodOf(client, since).start,
+  };
 };
 
 /** What the running period costs, at the price of this person's plan. */

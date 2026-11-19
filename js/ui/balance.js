@@ -15,6 +15,7 @@ import { money } from '../lib/format.js';
 export function dueTone(summary) {
   if (!summary || summary.balance <= 0) return 'ok';
   if (summary.status === 'overdue') return 'bad';
+  if (summary.hasDeadline === false) return null;
   return summary.daysToDue <= 2 ? 'warn' : null;
 }
 
@@ -22,6 +23,10 @@ export function dueRing(summary) {
   const owes = summary.balance > 0;
   const days = summary.daysToDue;
   const late = days < 0;
+  // What is owed is a bill with no deadline of its own: no countdown to show.
+  if (owes && summary.hasDeadline === false) {
+    return ring({ value: 0, max: 1, top: '$', bottom: 'por pagar' });
+  }
   // A weekly client's ring is a week wide. Drawing seven days against a
   // fourteen-day dial would show them half full on the day they pay.
   const span = Number(summary.currentPeriod?.every) || PERIOD_DAYS;

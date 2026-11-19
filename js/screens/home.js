@@ -14,7 +14,7 @@ import { card, button, alert, sectionLabel, skeletonRows, defList, defRow } from
 import { balanceHeadline } from '../ui/balance.js';
 import { go } from '../lib/router.js';
 import {
-  store, subscribe, billing, currentPeriod, periodPrice, isPaused, isReady, paidUpTo,
+  store, subscribe, billing, currentPeriod, periodPrice, isPaused, isReady, paidUpTo, lateStart,
 } from '../data/store.js';
 import { latest } from '../data/receipts.js';
 import { mealsOn, extrasOf } from '../lib/pricing.js';
@@ -75,11 +75,14 @@ function paymentCard() {
       balanceHeadline(summary),
 
       owes
-        ? alert(
-            summary.daysToDue < 0
-              ? `Venció ${humanDelta(days)} — ${formatDay(summary.dueDate)}.`
-              : `Vence ${humanDelta(days)} — ${formatDay(summary.dueDate)}.`,
-            summary.status === 'overdue' ? 'bad' : days <= 2 ? 'warn' : 'info')
+        // A bill saved long ago can carry no deadline: said without a date.
+        ? (summary.hasDeadline
+            ? alert(
+                summary.daysToDue < 0
+                  ? `Venció ${humanDelta(days)} — ${formatDay(summary.dueDate)}.`
+                  : `Vence ${humanDelta(days)} — ${formatDay(summary.dueDate)}.`,
+                summary.status === 'overdue' ? 'bad' : days <= 2 ? 'warn' : 'info')
+            : alert('Tienes un saldo pendiente con la cocina.', 'info'))
         : alert(paidUpTo()
           ? `Estás al corriente: pagaste hasta el ${formatDay(paidUpTo())}. Gracias.`
           : 'Estás al corriente con la cocina. Gracias.', 'ok'),
@@ -102,12 +105,20 @@ function periodCard() {
   const price = periodPrice();
   const order = [1, 2, 3, 4, 5, 6, 0];
   const extras = extrasOf(client);
+  const word = periodWord(client);
+  // Somebody who started with this one already under way does not pay it:
+  // what they are shown is the first one they do, with its own pay day.
+  const late = lateStart();
+  const shown = late ? late.first : period;
+  const payDay = payDayAfter(shown);
 
   return h('div.stack.stack-3',
-    sectionLabel(periodWord(client) === 'semana' ? 'Mi semana de pago' : 'Mi quincena'),
+    sectionLabel(late
+      ? (word === 'semana' ? 'Mi primera semana de pago' : 'Mi primera quincena')
+      : (word === 'semana' ? 'Mi semana de pago' : 'Mi quincena')),
     card(h('div.stack.stack-3',
       h('div.row.row--between',
-        h('span.t-sm.c-soft', formatRange(period.start, period.end)),
+        h('span.t-sm.c-soft', formatRange(shown.start, shown.end)),
         h('span.t-lg.w-700', price ? money(price) : '—')),
 
       h('div.weekstrip', order.map((weekday) => {
@@ -127,16 +138,27 @@ function periodCard() {
         defRow('Horario', client.deliveryWindow || '—'),
         // The one date they need: not the bill's grace deadline, the day they
         // turn up with the money.
-        defRow('Próximo pago',
-          `${capitalize(weekdayName(payDayAfter(period)))} ${formatDay(payDayAfter(period))}`),
+        defRow(late ? 'Primer pago' : 'Próximo pago',
+          `${capitalize(weekdayName(payDay))} ${formatDay(payDay)}`),
       ].filter(Boolean)),
 
       // Paid for once eaten, never before — the way the kitchen has always
       // worked, said in the one place a client looks for it.
-      alert(`Esta ${periodWord(client)} se paga cuando termina, el `
-        + `${weekdayName(payDayAfter(period))} ${formatDay(payDayAfter(period))}: siempre pagas `
-        + 'lo que ya comiste, nunca por adelantado. En la cocina te dan tu recibo al momento.',
-      'info'))));
+      late
+        ? alert(firstWords(late, word, payDay), 'info')
+        : alert(`Esta ${word} se paga cuando termina, el `
+          + `${weekdayName(payDay)} ${formatDay(payDay)}: siempre pagas `
+          + 'lo que ya comiste, nunca por adelantado. En la cocina te dan tu recibo al momento.',
+        'info'))));
+}
+
+/** What somebody in their first days — or about to start — is told about paying. */
+function firstWords(late, word, payDay) {
+  const when = `se paga cuando termina, el ${weekdayName(payDay)} ${formatDay(payDay)}`;
+  const began = `${late.upcoming ? 'Empiezas' : 'Empezaste'} el ${formatDay(late.since)}`;
+  if (!late.partial) return `${began}. Tu primera ${word} es esta: ${when}.`;
+  return `${began}, con la ${word} ya empezada. Tu primera ${word} completa es esta: ${when}. `
+    + 'Por tus primeros días, la cocina te dice si hay algo que pagar.';
 }
 
 /* --- The last payment -------------------------------------------------------- */
@@ -151,7 +173,9 @@ function lastPaymentCard() {
       h('span', { style: { color: 'var(--ok-600)' } }, icon('check')),
       h('div.grow',
         h('div.t-lg.w-700', money(last.amount)),
-        h('div.t-sm.c-soft', `${formatDayLong(last.date)} · ${last.folio || ''}`)),
+        // A receipt from long ago can have no date: then just its folio.
+        h('div.t-sm.c-soft',
+          [last.date ? formatDayLong(last.date) : '', last.folio || ''].filter(Boolean).join(' · '))),
       button('Ver recibo', {
         variant: 'ghost', size: 'sm', onClick: () => go('/billing'),
       }))));
